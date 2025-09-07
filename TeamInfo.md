@@ -12,8 +12,8 @@
 | Member1  | jjuluri2@illinois.edu |
 | Member2  | Shiv Bhavsar          |
 | Member2  | sbhav12@illinois.edu  |
-| Member3  |                       |
-| Member3  |                       |
+| Member3  | Grace Lin             |
+| Member3  | ziyue8@illinois.edu   |
 
 ## Project Information
 
