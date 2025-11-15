@@ -4,8 +4,10 @@ import { PatientList } from "@/components/PatientList";
 import { PatientProfile } from "@/components/PatientProfile";
 import { ConsultationScreen } from "@/components/ConsultationScreen";
 import { InvoiceManagement } from "@/components/InvoiceManagement";
+import axios from "axios";
+import { getBaseUrl } from "@/utils/server.utils";
 
-export default function App() {
+export default function App({ patients = [] }) {
   const [currentScreen, setCurrentScreen] = useState("dashboard");
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
@@ -35,6 +37,7 @@ export default function App() {
       case "patients":
         return (
           <PatientList
+            patients={patients}
             onPatientSelect={(patient) => {
               setSelectedPatient(patient);
               setCurrentScreen("patient-profile");
@@ -100,4 +103,17 @@ export default function App() {
       </main>
     </div>
   );
+}
+
+export async function getServerSideProps() {
+  console.log(getBaseUrl());
+  const { data: patients = [] } = await axios.get(
+    `${getBaseUrl()}/api/patient`
+  );
+
+  return {
+    props: {
+      patients
+    }
+  };
 }

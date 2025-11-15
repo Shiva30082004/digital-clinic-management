@@ -1,25 +1,21 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import { getDbConnection } from "@/lib/database";
+import Patient from "@/types/Patient";
 import type { NextApiRequest, NextApiResponse } from "next";
-
-type Data = {
-  name: string;
-};
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<Data>
+  res: NextApiResponse<Patient[]>
 ) {
   const conn = await getDbConnection();
 
   if (!conn) return res.status(500).end();
 
   const [rows] = await conn.query(
-    "SELECT COUNT(*) AS count_patients FROM Patients;"
+    "SELECT PatientID as id, CONCAT(FirstName, ' ', LastName) AS name, TIMESTAMPDIFF(YEAR, DateOfBirth, CURDATE()) AS age FROM Patients WHERE ClinicID = 238;"
   );
-  console.log("Current time from database:", rows);
 
   conn.release();
 
-  res.status(200).json({ name: "John Doe" });
+  res.status(200).json(rows as Patient[]);
 }
