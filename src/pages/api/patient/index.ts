@@ -1,9 +1,8 @@
-import type { NextApiRequest, NextApiResponse } from "next";
+import { CLINIC_ID_HEADER_KEY } from "@/constants/auth";
 import { getDbConnection } from "@/lib/database";
 import ApiResponse from "@/types/ApiResponse";
 import Patient from "@/types/Patient";
-import { CLINIC_ID_HEADER_KEY } from "@/constants/auth";
-
+import type { NextApiRequest, NextApiResponse } from "next";
 
 const ALLOWED_GENDERS = ["M", "F"] as const;
 
@@ -11,35 +10,29 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Patient | Patient[]>>
 ) {
-  const method = req.method?.toUpperCase();
-
-  if (!["GET", "POST", "PUT", "DELETE"].includes(method || "")) {
-    return res.status(405).json({ message: "Method not allowed" });
-  }
-
-  // Middleware guarantees this exists
-  const clinicId = Number(req.headers[CLINIC_ID_HEADER_KEY]);
-
   //
   // ------------------------ GET ------------------------
   //
-  if (method === "GET") {
+  if (req.method === "GET") {
+    const clinicId = req.headers[CLINIC_ID_HEADER_KEY] as string;
     const idParam = req.query.id;
-    const patientId = Array.isArray(idParam) ? Number(idParam[0]) : Number(idParam);
+    const patientId = Array.isArray(idParam) ? idParam[0] : idParam;
 
     const conn = await getDbConnection();
     if (!conn) return res.status(500).end();
 
     try {
       if (patientId) {
-        const sql = `
+        // Single patient
+        const query = `
           SELECT patientId, firstName, lastName, emailAddress, gender, dateOfBirth,
                  TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE()) AS age,
                  clinicId
           FROM Patients
           WHERE patientId = ? AND clinicId = ?
         `;
-        const [rows] = await conn.execute<Patient[]>(sql, [patientId, clinicId]);
+        const values = [patientId, clinicId];
+        const [rows] = await conn.execute<Patient[]>(query, values);
         conn.release();
 
         if (rows.length === 0) {
@@ -49,8 +42,8 @@ export default async function handler(
         return res.status(200).json({ data: rows[0] });
       }
 
-      // Otherwise: list all
-      const sql = `
+      // List all patients
+      const query = `
         SELECT patientId, firstName, lastName, emailAddress, gender, dateOfBirth,
                TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE()) AS age,
                clinicId
@@ -58,7 +51,8 @@ export default async function handler(
         WHERE clinicId = ?
         ORDER BY firstName, lastName
       `;
-      const [rows] = await conn.execute<Patient[]>(sql, [clinicId]);
+      const values = [clinicId];
+      const [rows] = await conn.execute<Patient[]>(query, values);
       conn.release();
 
       return res.status(200).json({ data: rows });
@@ -72,18 +66,21 @@ export default async function handler(
   //
   // ------------------------ POST ------------------------
   //
-  if (method === "POST") {
+  if (req.method === "POST") {
+    const clinicId = req.headers[CLINIC_ID_HEADER_KEY] as string;
     const { firstName, lastName, emailAddress, gender, dateOfBirth } = req.body ?? {};
 
-    // Validate before DB call
-    if (!firstName) return res.status(400).json({ message: "firstName is required" });
-    if (!ALLOWED_GENDERS.includes(gender)) {
-      return res.status(400).json({ message: "gender must be 'M' or 'F'" });
+    // Validate required fields
+    if (!firstName) {
+      return res.status(400).json({ message: "firstName is required" });
+    }
+    if (!gender || !ALLOWED_GENDERS.includes(gender)) {
+      return res.status(400).json({ message: "gender is required and must be 'M' or 'F'" });
     }
     if (dateOfBirth) {
       const d = new Date(dateOfBirth);
       if (Number.isNaN(d.getTime())) {
-        return res.status(400).json({ message: "Invalid dateOfBirth (YYYY-MM-DD)" });
+        return res.status(400).json({ message: "Invalid dateOfBirth format (use YYYY-MM-DD)" });
       }
     }
 
@@ -91,7 +88,7 @@ export default async function handler(
     if (!conn) return res.status(500).end();
 
     try {
-      const sql = `
+      const query = `
         INSERT INTO Patients (firstName, lastName, emailAddress, gender, dateOfBirth, clinicId)
         VALUES (?, ?, ?, ?, ?, ?)
       `;
@@ -104,21 +101,18 @@ export default async function handler(
         clinicId
       ];
 
-      const [result]: any = await conn.execute(sql, values);
+      const [result]: any = await conn.execute(query, values);
       const insertedId = result.insertId;
 
       // Fetch the created record
-      const [rows] = await conn.execute<Patient[]>(
-        `
-          SELECT patientId, firstName, lastName, emailAddress, gender, dateOfBirth,
-                 TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE()) AS age,
-                 clinicId
-          FROM Patients
-          WHERE patientId = ? AND clinicId = ?
-        `,
-        [insertedId, clinicId]
-      );
-
+      const fetchQuery = `
+        SELECT patientId, firstName, lastName, emailAddress, gender, dateOfBirth,
+               TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE()) AS age,
+               clinicId
+        FROM Patients
+        WHERE patientId = ? AND clinicId = ?
+      `;
+      const [rows] = await conn.execute<Patient[]>(fetchQuery, [insertedId, clinicId]);
       conn.release();
 
       return res.status(201).json({
@@ -135,7 +129,8 @@ export default async function handler(
   //
   // ------------------------ PUT ------------------------
   //
-  if (method === "PUT") {
+  if (req.method === "PUT") {
+    const clinicId = req.headers[CLINIC_ID_HEADER_KEY] as string;
     const { patientId, firstName, lastName, emailAddress, gender, dateOfBirth } = req.body ?? {};
 
     if (!patientId) {
@@ -168,7 +163,7 @@ export default async function handler(
       if (dateOfBirth !== null) {
         const d = new Date(dateOfBirth);
         if (Number.isNaN(d.getTime())) {
-          return res.status(400).json({ message: "Invalid dateOfBirth (YYYY-MM-DD)" });
+          return res.status(400).json({ message: "Invalid dateOfBirth format (use YYYY-MM-DD)" });
         }
       }
       updates.push("dateOfBirth = ?");
@@ -179,19 +174,18 @@ export default async function handler(
       return res.status(400).json({ message: "No fields to update" });
     }
 
-    // Add WHERE clause params
     values.push(patientId, clinicId);
 
     const conn = await getDbConnection();
     if (!conn) return res.status(500).end();
 
     try {
-      const sql = `
+      const query = `
         UPDATE Patients
         SET ${updates.join(", ")}
         WHERE patientId = ? AND clinicId = ?
       `;
-      const [result]: any = await conn.execute(sql, values);
+      const [result]: any = await conn.execute(query, values);
 
       if (result.affectedRows === 0) {
         conn.release();
@@ -199,17 +193,14 @@ export default async function handler(
       }
 
       // Fetch updated record
-      const [rows] = await conn.execute<Patient[]>(
-        `
-          SELECT patientId, firstName, lastName, emailAddress, gender, dateOfBirth,
-                 TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE()) AS age,
-                 clinicId
-          FROM Patients
-          WHERE patientId = ? AND clinicId = ?
-        `,
-        [patientId, clinicId]
-      );
-
+      const fetchQuery = `
+        SELECT patientId, firstName, lastName, emailAddress, gender, dateOfBirth,
+               TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE()) AS age,
+               clinicId
+        FROM Patients
+        WHERE patientId = ? AND clinicId = ?
+      `;
+      const [rows] = await conn.execute<Patient[]>(fetchQuery, [patientId, clinicId]);
       conn.release();
 
       return res.status(200).json({
@@ -226,9 +217,10 @@ export default async function handler(
   //
   // ------------------------ DELETE ------------------------
   //
-  if (method === "DELETE") {
+  if (req.method === "DELETE") {
+    const clinicId = req.headers[CLINIC_ID_HEADER_KEY] as string;
     const idParam = req.query.id;
-    const patientId = Array.isArray(idParam) ? Number(idParam[0]) : Number(idParam);
+    const patientId = Array.isArray(idParam) ? idParam[0] : idParam;
 
     if (!patientId) {
       return res.status(400).json({ message: "patient id is required" });
@@ -238,12 +230,12 @@ export default async function handler(
     if (!conn) return res.status(500).end();
 
     try {
-      const sql = `
+      const query = `
         DELETE FROM Patients
         WHERE patientId = ? AND clinicId = ?
       `;
-      const [result]: any = await conn.execute(sql, [patientId, clinicId]);
-
+      const values = [patientId, clinicId];
+      const [result]: any = await conn.execute(query, values);
       conn.release();
 
       if (result.affectedRows === 0) {
@@ -257,4 +249,7 @@ export default async function handler(
       return res.status(500).json({ message: "Internal server error" });
     }
   }
+
+  // Method not allowed
+  return res.status(405).end();
 }
