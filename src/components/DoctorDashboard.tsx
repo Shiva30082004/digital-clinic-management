@@ -1,13 +1,73 @@
 import React from 'react';
+import { 
+  Calendar, 
+  Clock, 
+  TrendingUp, 
+  Users, 
+  DollarSign, 
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Activity,
+  Search,
+  Eye,
+  CheckCircle,
+  CircleDashed,
+  MoreVertical
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Mock data
 const todaysAppointments = [
-  { id: 1, time: '09:00', patient: "Jahnavi J", status: 'waiting', type: 'General Checkup' },
-  { id: 2, time: '09:30', patient: "Arjun S", status: 'active', type: 'Follow-up' },
-  { id: 3, time: '10:00', patient: "Grace L", status: 'completed', type: 'Consultation' },
-  { id: 4, time: '10:30', patient: "Shiv B", status: 'waiting', type: 'Blood Test' },
-  { id: 5, time: '11:00', patient: "David D", status: 'scheduled', type: 'Physical Exam' },
+  { id: 1, time: '09:00', patient: "Jahnavi J", status: 'Booked', type: 'General Checkup' },
+  { id: 2, time: '09:30', patient: "Arjun S", status: 'Active', type: 'Follow-up' },
+  { id: 3, time: '10:00', patient: "Grace L", status: 'Completed', type: 'Consultation' },
+  { id: 4, time: '10:30', patient: "Shiv B", status: 'Booked', type: 'Blood Test' },
+  { id: 5, time: '11:00', patient: "David D", status: 'Booked', type: 'Physical Exam' },
 ];
+
+const recentPatients = [
+  { id: 1, name: 'Jahnavi J', lastVisit: '2 days ago' },
+  { id: 2, name: 'Arjun S', lastVisit: '1 week ago' },
+  { id: 3, name: 'Grace L', lastVisit: '3 days ago' },
+];
+
+const getStatusColor = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'completed':
+      return 'bg-green-100 text-green-700 hover:bg-green-100';
+    case 'active':
+      return 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100';
+    case 'booked':
+      return 'bg-blue-100 text-blue-700 hover:bg-blue-100';
+    case 'cancelled':
+      return 'bg-red-100 text-red-700 hover:bg-red-100';
+    default:
+      return 'bg-slate-100 text-slate-700 hover:bg-slate-100';
+  }
+};
+
+const getStatusIcon = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'completed':
+      return <CheckCircle className="h-4 w-4" />;
+    case 'active':
+      return <Activity className="h-4 w-4" />;
+    default:
+      return <CircleDashed className="h-4 w-4" />;
+  }
+};
 
 
 export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
@@ -16,151 +76,130 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-semibold mb-2">Dashboard</h1>
-          <p className="text-gray-600">Welcome back, Dr. Doctor</p>
+          <h1 className="text-3xl font-bold text-slate-900 mb-1">Good Morning, Doctor</h1>
+          <p className="text-slate-600">You have 5 appointments today</p>
         </div>
-        <div className="px-4 py-2 bg-blue-200 border-2 border-blue-400 rounded">
-          + New Appointment
-        </div>
+        <Button className="bg-blue-600 hover:bg-blue-700">
+          <Plus className="mr-2 h-4 w-4" />
+          New Appointment
+        </Button>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="border-2 border-gray-300 p-4 bg-white">
-          <div className="flex justify-between items-center">
+      {/* Today's Appointments */}
+      <Card className="border-slate-200">
+        <CardHeader>
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-2">Today's Appointments</p>
-              <p className="text-2xl font-semibold">XX</p>
+              <CardTitle>Today's Appointments</CardTitle>
+              <CardDescription>Manage your schedule for today</CardDescription>
             </div>
-            <div className="w-8 h-8 bg-blue-300 rounded"></div>
-          </div>
-        </div>
-        <div className="border-2 border-gray-300 p-4 bg-white">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm text-gray-600 mb-2">Active Patients</p>
-              <p className="text-2xl font-semibold">XXX</p>
-            </div>
-            <div className="w-8 h-8 bg-green-300 rounded"></div>
-          </div>
-        </div>
-        <div className="border-2 border-gray-300 p-4 bg-white">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm text-gray-600 mb-2">Monthly Revenue</p>
-              <p className="text-2xl font-semibold">$XXXXX</p>
-            </div>
-            <div className="w-8 h-8 bg-purple-300 rounded"></div>
-          </div>
-        </div>
-        <div className="border-2 border-gray-300 p-4 bg-white">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm text-gray-600 mb-2">Pending Invoices</p>
-              <p className="text-2xl font-semibold">X</p>
-            </div>
-            <div className="w-8 h-8 bg-orange-300 rounded"></div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Today's Appointments */}
-        <div className="lg:col-span-2">
-          <div className="border-2 border-gray-300 p-6 bg-white">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Today's Appointments</h3>
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gray-200 border border-gray-400 rounded flex items-center justify-center">←</div>
-                <span className="text-sm">Wed, September 17, 2025</span>
-                <div className="w-8 h-8 bg-gray-200 border border-gray-400 rounded flex items-center justify-center">→</div>
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="icon" className="h-8 w-8">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="text-sm font-medium text-slate-700 min-w-[140px] text-center">
+                Wed, Sep 17, 2025
               </div>
+              <Button variant="outline" size="icon" className="h-8 w-8">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
-            
-            <div className="space-y-3">
-              {todaysAppointments.map((appointment) => (
-                <div key={appointment.id} className="flex items-center justify-between p-3 border-2 border-gray-200">
-                  <div className="flex items-center space-x-3">
-                    <div className="text-sm font-medium w-12">{appointment.time}</div>
-                    <div>
-                      <p className="font-medium">{appointment.patient}</p>
-                      <p className="text-sm text-gray-600">{appointment.type}</p>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {todaysAppointments.map((appointment) => (
+              <div 
+                key={appointment.id} 
+                className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:border-slate-300 hover:shadow-sm transition-all"
+              >
+                <div className="flex items-center space-x-4 flex-1">
+                  <div className="flex items-center justify-center w-16 h-16 bg-slate-100 rounded-lg">
+                    <div className="text-center">
+                      <div className="text-xs font-medium text-slate-600">
+                        {appointment.time.split(':')[0]}
+                      </div>
+                      <div className="text-lg font-bold text-slate-900">
+                        {appointment.time.split(':')[1]}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="px-2 py-1 bg-gray-200 border border-gray-400 rounded text-xs">
-                      {appointment.status}
-                    </div>
-                    <div 
-                      className="px-2 py-1 bg-blue-200 border border-blue-400 rounded cursor-pointer text-xs"
-                      onClick={() => onStartConsultation(appointment)}
-                    >
-                      View
-                    </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-slate-900">{appointment.patient}</p>
+                    <p className="text-sm text-slate-600">{appointment.type}</p>
                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="flex items-center space-x-2">
+                  <Badge variant="secondary" className={getStatusColor(appointment.status)}>
+                    {getStatusIcon(appointment.status)}
+                    <span className="ml-1 capitalize">{appointment.status}</span>
+                  </Badge>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => onStartConsultation(appointment)}
+                  >
+                    <Eye className="mr-1 h-3 w-3" />
+                    View
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem>Start Consultation</DropdownMenuItem>
+                      <DropdownMenuItem>Reschedule</DropdownMenuItem>
+                      <DropdownMenuItem className="text-red-600">Cancel</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Patient Search */}
-        <div>
-          <div className="border-2 border-gray-300 p-6 bg-white">
-            <h3 className="text-lg font-semibold mb-4">Quick Patient Search</h3>
-            <div className="space-y-4">
-              <div className="relative">
-                <input 
-                  className="w-full h-10 bg-gray-100 border-2 border-gray-300 rounded px-3"
-                  placeholder="Search patients..."
-                />
-              </div>
-              <div className="space-y-2">
-                <div 
-                  className="p-2 border-2 border-gray-200 cursor-pointer hover:bg-gray-50" 
-                  onClick={() => onPatientSelect({ id: 1, name: 'Jahnavi J' })}
-                >
-                  <p className="font-medium">Jahnavi J</p>
-                  <p className="text-sm text-gray-600">Last visit: 2 days ago</p>
-                </div>
-                <div 
-                  className="p-2 border-2 border-gray-200 cursor-pointer hover:bg-gray-50" 
-                  onClick={() => onPatientSelect({ id: 2, name: 'Arjun S' })}
-                >
-                  <p className="font-medium">Arjun S</p>
-                  <p className="text-sm text-gray-600">Last visit: 1 week ago</p>
-                </div>
-                <div 
-                  className="p-2 border-2 border-gray-200 cursor-pointer hover:bg-gray-50" 
-                  onClick={() => onPatientSelect({ id: 3, name: 'Grace L' })}
-                >
-                  <p className="font-medium">Grace L</p>
-                  <p className="text-sm text-gray-600">Last visit: 3 days ago</p>
-                </div>
-              </div>
-              <div className="w-full h-8 bg-gray-100 border-2 border-gray-300 rounded flex items-center justify-center">
-                View All Patients
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Charts - Simple placeholder boxes */}
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="border-2 border-gray-300 p-6 bg-white">
-          <h3 className="text-lg font-semibold mb-4">Monthly Income Trend</h3>
-          <div className="h-64 bg-gray-100 border-2 border-gray-200 rounded flex items-center justify-center">
-            <div className="text-gray-500">[Income Chart: Jan $45k → Jun $67k]</div>
-          </div>
-        </div>
+        <Card className="border-slate-200">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <TrendingUp className="mr-2 h-5 w-5 text-purple-600" />
+              Monthly Income Trend
+            </CardTitle>
+            <CardDescription>Revenue overview for the past 6 months</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64 bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg flex items-center justify-center border border-slate-200">
+              <div className="text-center text-slate-500">
+                <TrendingUp className="h-12 w-12 mx-auto mb-2 text-purple-400" />
+                <p className="text-sm">Chart: Jan $45k → Jun $67k</p>
+                <p className="text-xs mt-1">+48% growth</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="border-2 border-gray-300 p-6 bg-white">
-          <h3 className="text-lg font-semibold mb-4">Patient Visits This Week</h3>
-          <div className="h-64 bg-gray-100 border-2 border-gray-200 rounded flex items-center justify-center">
-            <div className="text-gray-500">[Visits Chart: Mon 12, Tue 15, Wed 8, Thu 18...]</div>
-          </div>
-        </div>
+        <Card className="border-slate-200">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Users className="mr-2 h-5 w-5 text-green-600" />
+              Patient Visits This Week
+            </CardTitle>
+            <CardDescription>Daily patient visit statistics</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg flex items-center justify-center border border-slate-200">
+              <div className="text-center text-slate-500">
+                <Activity className="h-12 w-12 mx-auto mb-2 text-green-400" />
+                <p className="text-sm">Chart: Mon 12, Tue 15, Wed 8, Thu 18...</p>
+                <p className="text-xs mt-1">Average: 13 visits/day</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
