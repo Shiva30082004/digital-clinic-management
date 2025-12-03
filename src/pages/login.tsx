@@ -27,6 +27,14 @@ export default function LoginPage() {
     setIsLoading(true);
     setError('');
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(adminCredentials.email)) {
+      setError('Please enter a valid email address');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const auth = getFirebaseAuth();
       const userCredential = await signInWithEmailAndPassword(
@@ -66,6 +74,14 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(consultantCredentials.email)) {
+      setError('Please enter a valid email address');
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const auth = getFirebaseAuth();
@@ -116,6 +132,8 @@ export default function LoginPage() {
         return 'Invalid email or password.';
       case 'auth/too-many-requests':
         return 'Too many failed attempts. Please try again later.';
+      case 'auth/weak-password':
+        return 'Password must be at least 6 characters long.';
       default:
         return 'Login failed. Please try again.';
     }
@@ -303,6 +321,7 @@ export default function LoginPage() {
             {/* Footer */}
             <div className="mt-6 text-center text-sm text-slate-600">
               <p>Forgot your password? <a href="#" className="text-blue-600 hover:underline">Reset it here</a></p>
+              <p className="mt-2">Don't have an account? <a href="/signup" className="text-blue-600 hover:underline">Sign up here</a></p>
             </div>
           </CardContent>
         </Card>
