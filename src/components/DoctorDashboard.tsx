@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Calendar, 
   Clock, 
@@ -20,11 +20,28 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -71,6 +88,42 @@ const getStatusIcon = (status: string) => {
 
 
 export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
+  const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [newAppointment, setNewAppointment] = useState({
+    patientId: '',
+    patientName: '',
+    date: '',
+    startTime: '',
+    endTime: '',
+    status: 'Booked'
+  });
+
+  const handleScheduleAppointment = () => {
+    // TODO: Call API to create appointment
+    console.log('Scheduling appointment:', newAppointment);
+    setIsNewAppointmentOpen(false);
+    // Reset form
+    setNewAppointment({
+      patientId: '',
+      patientName: '',
+      date: '',
+      startTime: '',
+      endTime: '',
+      status: 'Booked'
+    });
+  };
+
+  const handleDeleteAppointment = (appointmentId: number) => {
+    // TODO: Call API to delete appointment
+    console.log('Deleting appointment:', appointmentId);
+  };
+
+  const handleUpdateStatus = (appointmentId: number, newStatus: string) => {
+    // TODO: Call API to update appointment status
+    console.log('Updating appointment status:', appointmentId, newStatus);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -79,7 +132,10 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
           <h1 className="text-3xl font-bold text-slate-900 mb-1">Good Morning, Doctor</h1>
           <p className="text-slate-600">You have 5 appointments today</p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700">
+        <Button 
+          className="bg-blue-600 hover:bg-blue-700"
+          onClick={() => setIsNewAppointmentOpen(true)}
+        >
           <Plus className="mr-2 h-4 w-4" />
           New Appointment
         </Button>
@@ -142,18 +198,78 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
                     <Eye className="mr-1 h-3 w-3" />
                     View
                   </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>Start Consultation</DropdownMenuItem>
-                      <DropdownMenuItem>Reschedule</DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600">Cancel</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="relative">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8"
+                      onClick={() => setOpenMenuId(openMenuId === appointment.id ? null : appointment.id)}
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                    {openMenuId === appointment.id && (
+                      <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                        <div className="py-1" role="menu">
+                          <button
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            onClick={() => {
+                              onStartConsultation(appointment);
+                              setOpenMenuId(null);
+                            }}
+                          >
+                            Start Consultation
+                          </button>
+                          <div className="border-t border-gray-100"></div>
+                          <button
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            onClick={() => {
+                              handleUpdateStatus(appointment.id, 'Booked');
+                              setOpenMenuId(null);
+                            }}
+                          >
+                            Mark as Booked
+                          </button>
+                          <button
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            onClick={() => {
+                              handleUpdateStatus(appointment.id, 'Active');
+                              setOpenMenuId(null);
+                            }}
+                          >
+                            Mark as Active
+                          </button>
+                          <button
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            onClick={() => {
+                              handleUpdateStatus(appointment.id, 'Completed');
+                              setOpenMenuId(null);
+                            }}
+                          >
+                            Mark as Completed
+                          </button>
+                          <button
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            onClick={() => {
+                              handleUpdateStatus(appointment.id, 'Cancelled');
+                              setOpenMenuId(null);
+                            }}
+                          >
+                            Mark as Cancelled
+                          </button>
+                          <div className="border-t border-gray-100"></div>
+                          <button
+                            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                            onClick={() => {
+                              handleDeleteAppointment(appointment.id);
+                              setOpenMenuId(null);
+                            }}
+                          >
+                            Delete Appointment
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -201,6 +317,112 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
           </CardContent>
         </Card>
       </div>
+
+      {/* New Appointment Dialog */}
+      <Dialog open={isNewAppointmentOpen} onOpenChange={setIsNewAppointmentOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Schedule New Appointment</DialogTitle>
+            <DialogDescription>
+              Create a new appointment for a patient
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="patient">Patient</Label>
+              <Select
+                value={newAppointment.patientId}
+                onValueChange={(value) => {
+                  const patient = recentPatients.find(p => p.id.toString() === value);
+                  setNewAppointment({
+                    ...newAppointment,
+                    patientId: value,
+                    patientName: patient?.name || ''
+                  });
+                }}
+              >
+                <SelectTrigger id="patient">
+                  <SelectValue placeholder="Select a patient" />
+                </SelectTrigger>
+                <SelectContent>
+                  {recentPatients.map((patient) => (
+                    <SelectItem key={patient.id} value={patient.id.toString()}>
+                      {patient.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500">
+                Select from existing patients or add new patient first
+              </p>
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="date">Date</Label>
+              <Input
+                id="date"
+                type="date"
+                value={newAppointment.date}
+                onChange={(e) => setNewAppointment({ ...newAppointment, date: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="startTime">Start Time</Label>
+                <Input
+                  id="startTime"
+                  type="time"
+                  value={newAppointment.startTime}
+                  onChange={(e) => setNewAppointment({ ...newAppointment, startTime: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="endTime">End Time</Label>
+                <Input
+                  id="endTime"
+                  type="time"
+                  value={newAppointment.endTime}
+                  onChange={(e) => setNewAppointment({ ...newAppointment, endTime: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={newAppointment.status}
+                onValueChange={(value) => setNewAppointment({ ...newAppointment, status: value })}
+              >
+                <SelectTrigger id="status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Booked">Booked</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Completed">Completed</SelectItem>
+                  <SelectItem value="Cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsNewAppointmentOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleScheduleAppointment}
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={!newAppointment.patientId || !newAppointment.date || !newAppointment.startTime || !newAppointment.endTime}
+            >
+              Schedule Appointment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
