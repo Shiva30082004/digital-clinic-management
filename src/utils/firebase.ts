@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
 export const getFirebaseAuth = () => {
@@ -11,7 +11,8 @@ export const getFirebaseAuth = () => {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
   };
 
-  const app = initializeApp(firebaseConfig);
+  // Check if Firebase app is already initialized
+  const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
   return getAuth(app);
 };

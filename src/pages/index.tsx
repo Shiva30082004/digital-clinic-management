@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useRouter } from "next/router";
 import { DoctorDashboard } from "@/components/DoctorDashboard";
 import { PatientList } from "@/components/PatientList";
 import { PatientProfile } from "@/components/PatientProfile";
@@ -19,9 +20,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 export default function App({ patients = [] }) {
+  const router = useRouter();
   const [currentScreen, setCurrentScreen] = useState("dashboard");
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+
+  const handleLogout = () => {
+    // Clear auth data
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('authToken');
+    
+    // Redirect to login page
+    router.push('/login');
+  };
 
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -135,7 +146,11 @@ export default function App({ patients = [] }) {
 
         {/* Bottom Actions */}
         <div className="p-4 border-t border-slate-200 space-y-1">
-          <Button variant="ghost" className="w-full justify-start h-11 text-red-600 hover:bg-red-50 hover:text-red-700">
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start h-11 text-red-600 hover:bg-red-50 hover:text-red-700"
+            onClick={handleLogout}
+          >
             <LogOut className="mr-3 h-5 w-5" />
             Logout
           </Button>
