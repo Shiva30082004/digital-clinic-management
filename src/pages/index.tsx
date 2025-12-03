@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { DoctorDashboard } from "@/components/DoctorDashboard";
 import { PatientList } from "@/components/PatientList";
@@ -24,6 +24,22 @@ export default function App({ patients = [] }) {
   const [currentScreen, setCurrentScreen] = useState("dashboard");
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const authToken = localStorage.getItem('authToken');
+    
+    if (!authToken) {
+      // Not authenticated, redirect to login
+      router.push('/login');
+    } else {
+      // Authenticated, allow access
+      setIsAuthenticated(true);
+      setIsLoading(false);
+    }
+  }, [router]);
 
   const handleLogout = () => {
     // Clear auth data
@@ -33,6 +49,18 @@ export default function App({ patients = [] }) {
     // Redirect to login page
     router.push('/login');
   };
+
+  // Show loading or nothing while checking auth
+  if (isLoading || !isAuthenticated) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
