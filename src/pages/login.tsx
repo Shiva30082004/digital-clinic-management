@@ -320,8 +320,7 @@ export default function LoginPage() {
 
             {/* Footer */}
             <div className="mt-6 text-center text-sm text-slate-600">
-              <p>Forgot your password? <a href="#" className="text-blue-600 hover:underline">Reset it here</a></p>
-              <p className="mt-2">Don't have an account? <a href="/signup" className="text-blue-600 hover:underline">Sign up here</a></p>
+              <p>Don't have an account? <a href="/signup" className="text-blue-600 hover:underline">Sign up here</a></p>
             </div>
           </CardContent>
         </Card>

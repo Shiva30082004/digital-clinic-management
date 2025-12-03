@@ -24,6 +24,7 @@ export default function SignupPage() {
     email: '',
     password: '',
     confirmPassword: '',
+    specialization: '',
     clinicName: ''
   });
   const [consultantSignup, setConsultantSignup] = useState({
@@ -32,6 +33,7 @@ export default function SignupPage() {
     email: '',
     password: '',
     confirmPassword: '',
+    specialization: '',
     clinicId: ''
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -307,6 +309,22 @@ export default function SignupPage() {
                   </div>
 
                   <div className="space-y-2">
+                    <Label htmlFor="admin-specialization">Specialization</Label>
+                    <div className="relative">
+                      <Stethoscope className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="admin-specialization"
+                        type="text"
+                        placeholder="e.g., Cardiology, Pediatrics"
+                        className="pl-10"
+                        value={adminSignup.specialization}
+                        onChange={(e) => setAdminSignup({ ...adminSignup, specialization: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="admin-clinicName">Clinic Name</Label>
                     <div className="relative">
                       <Building className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
@@ -412,6 +430,22 @@ export default function SignupPage() {
                           required
                         />
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="consultant-specialization">Specialization</Label>
+                    <div className="relative">
+                      <Stethoscope className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="consultant-specialization"
+                        type="text"
+                        placeholder="e.g., Cardiology, Pediatrics"
+                        className="pl-10"
+                        value={consultantSignup.specialization}
+                        onChange={(e) => setConsultantSignup({ ...consultantSignup, specialization: e.target.value })}
+                        required
+                      />
                     </div>
                   </div>
 
