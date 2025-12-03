@@ -12,12 +12,22 @@ import {
   Users, 
   FileText, 
   LogOut,
-  Search
+  Search,
+  UserCog
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export default function App({ patients = [] }) {
   const router = useRouter();
@@ -26,6 +36,15 @@ export default function App({ patients = [] }) {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [doctorProfile, setDoctorProfile] = useState({
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'doctor@example.com',
+    specialization: 'General Physician',
+    clinicName: 'DigiClinic',
+    consultationFees: '100'
+  });
 
   useEffect(() => {
     // Check if user is authenticated
@@ -48,6 +67,13 @@ export default function App({ patients = [] }) {
     
     // Redirect to login page
     router.push('/login');
+  };
+
+  const handleSaveProfile = () => {
+    // TODO: Call API to update doctor profile
+    console.log('Updating profile:', doctorProfile);
+    setIsEditProfileOpen(false);
+    // Show success message (you can add a toast notification here)
   };
 
   // Show loading or nothing while checking auth
@@ -176,6 +202,14 @@ export default function App({ patients = [] }) {
         <div className="p-4 border-t border-slate-200 space-y-1">
           <Button 
             variant="ghost" 
+            className="w-full justify-start h-11 text-slate-600 hover:bg-slate-50"
+            onClick={() => setIsEditProfileOpen(true)}
+          >
+            <UserCog className="mr-3 h-5 w-5" />
+            Edit Profile
+          </Button>
+          <Button 
+            variant="ghost" 
             className="w-full justify-start h-11 text-red-600 hover:bg-red-50 hover:text-red-700"
             onClick={handleLogout}
           >
@@ -204,6 +238,82 @@ export default function App({ patients = [] }) {
           <div className="p-6">{renderScreen()}</div>
         </div>
       </main>
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogDescription>
+              Update your profile information. Click save when you're done.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  value={doctorProfile.firstName}
+                  onChange={(e) => setDoctorProfile({ ...doctorProfile, firstName: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  value={doctorProfile.lastName}
+                  onChange={(e) => setDoctorProfile({ ...doctorProfile, lastName: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={doctorProfile.email}
+                onChange={(e) => setDoctorProfile({ ...doctorProfile, email: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="specialization">Specialization</Label>
+              <Input
+                id="specialization"
+                value={doctorProfile.specialization}
+                onChange={(e) => setDoctorProfile({ ...doctorProfile, specialization: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="clinicName">Clinic Name</Label>
+              <Input
+                id="clinicName"
+                value={doctorProfile.clinicName}
+                onChange={(e) => setDoctorProfile({ ...doctorProfile, clinicName: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="consultationFees">Consultation Fees ($)</Label>
+              <Input
+                id="consultationFees"
+                type="number"
+                min="0"
+                step="0.01"
+                value={doctorProfile.consultationFees}
+                onChange={(e) => setDoctorProfile({ ...doctorProfile, consultationFees: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditProfileOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveProfile} className="bg-blue-600 hover:bg-blue-700">
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
