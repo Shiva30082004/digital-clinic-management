@@ -18,7 +18,7 @@ export async function middleware(req: NextRequest) {
   const token = requestHeaders.get("x-authorization");
 
   if (!token)
-    return Response.json({ message: "Unauthorized" }, { status: 401 });
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const auth = getFirebaseAdminAuth();
 
@@ -32,7 +32,7 @@ export async function middleware(req: NextRequest) {
 
   if (!email) {
     return Response.json(
-      { message: "Email address is required" },
+      { error: "Email address is required" },
       { status: 400 }
     );
   }
@@ -54,7 +54,7 @@ export async function middleware(req: NextRequest) {
       }
     });
   } else {
-    return Response.json({ message: "Unauthorized" }, { status: 401 });
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 }
 

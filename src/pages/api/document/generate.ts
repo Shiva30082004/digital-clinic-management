@@ -21,7 +21,7 @@ export default async function handler(
 
     // if (!appointmentID) {
     //   return res.status(400).json({
-    //     message: "AppointmentID is required"
+    //     error: "AppointmentID is required"
     //   });
     // }
 

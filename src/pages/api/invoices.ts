@@ -12,7 +12,7 @@ export default async function handler(
 ) {
   const conn = await getDbConnection();
   if (!conn) {
-    return res.status(500).json({ message: "Database connection failed" } as InvoiceResponse);
+    return res.status(500).json({ error: "Database connection failed" } as InvoiceResponse);
   }
 
   try {
@@ -48,7 +48,7 @@ export default async function handler(
 
         if (amount == null || appointmentID == null) {
           return res.status(400).json({
-            message: "amount and appointmentID are required"
+            error: "amount and appointmentID are required"
           } as InvoiceResponse);
         }
 
@@ -73,7 +73,7 @@ export default async function handler(
 
         if (!invoiceID) {
           return res.status(400).json({
-            message: "invoiceID is required"
+            error: "invoiceID is required"
           } as InvoiceResponse);
         }
         const [result]: any = await conn.execute(
@@ -83,7 +83,7 @@ export default async function handler(
 
         if (result.affectedRows === 0) {
           return res.status(404).json({
-            message: "Invoice not found"
+            error: "Invoice not found"
           } as InvoiceResponse);
         }
 
@@ -102,7 +102,7 @@ export default async function handler(
 
         if (!invoiceID) {
           return res.status(400).json({
-            message: "invoiceID is required"
+            error: "invoiceID is required"
           } as InvoiceResponse);
         }
 
@@ -113,7 +113,7 @@ export default async function handler(
 
         if (result.affectedRows === 0) {
           return res.status(404).json({
-            message: "Invoice not found"
+            error: "Invoice not found"
           } as InvoiceResponse);
         }
         return res.status(204).end();
@@ -125,7 +125,7 @@ export default async function handler(
   } catch (err) {
     console.error(err);
     return res.status(500).json({
-      message: "Internal server error"
+      error: "Internal server error"
     } as InvoiceResponse);
   } finally {
     conn.release();

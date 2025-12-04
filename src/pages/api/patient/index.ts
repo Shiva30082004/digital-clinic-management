@@ -36,7 +36,7 @@ export default async function handler(
         conn.release();
 
         if (rows.length === 0) {
-          return res.status(404).json({ message: "Patient not found" });
+          return res.status(404).json({ error: "Patient not found" });
         }
 
         return res.status(200).json({ data: rows[0] });
@@ -59,7 +59,7 @@ export default async function handler(
     } catch (err) {
       console.error("GET patients error:", err);
       try { conn.release(); } catch {}
-      return res.status(500).json({ message: "Internal server error" });
+      return res.status(500).json({ error: "Internal server error" });
     }
   }
 
@@ -72,15 +72,15 @@ export default async function handler(
 
     // Validate required fields
     if (!firstName) {
-      return res.status(400).json({ message: "firstName is required" });
+      return res.status(400).json({ error: "firstName is required" });
     }
     if (!gender || !ALLOWED_GENDERS.includes(gender)) {
-      return res.status(400).json({ message: "gender is required and must be 'M' or 'F'" });
+      return res.status(400).json({ error: "gender is required and must be 'M' or 'F'" });
     }
     if (dateOfBirth) {
       const d = new Date(dateOfBirth);
       if (Number.isNaN(d.getTime())) {
-        return res.status(400).json({ message: "Invalid dateOfBirth format (use YYYY-MM-DD)" });
+        return res.status(400).json({ error: "Invalid dateOfBirth format (use YYYY-MM-DD)" });
       }
     }
 
@@ -117,12 +117,12 @@ export default async function handler(
 
       return res.status(201).json({
         data: rows[0],
-        message: "Patient created"
+        error: "Patient created"
       });
     } catch (err) {
       console.error("POST patient error:", err);
       try { conn.release(); } catch {}
-      return res.status(500).json({ message: "Internal server error" });
+      return res.status(500).json({ error: "Internal server error" });
     }
   }
 
@@ -134,7 +134,7 @@ export default async function handler(
     const { patientId, firstName, lastName, emailAddress, gender, dateOfBirth } = req.body ?? {};
 
     if (!patientId) {
-      return res.status(400).json({ message: "patientId is required" });
+      return res.status(400).json({ error: "patientId is required" });
     }
 
     const updates: string[] = [];
@@ -154,7 +154,7 @@ export default async function handler(
     }
     if (gender !== undefined) {
       if (!ALLOWED_GENDERS.includes(gender)) {
-        return res.status(400).json({ message: "gender must be 'M' or 'F'" });
+        return res.status(400).json({ error: "gender must be 'M' or 'F'" });
       }
       updates.push("gender = ?");
       values.push(gender);
@@ -163,7 +163,7 @@ export default async function handler(
       if (dateOfBirth !== null) {
         const d = new Date(dateOfBirth);
         if (Number.isNaN(d.getTime())) {
-          return res.status(400).json({ message: "Invalid dateOfBirth format (use YYYY-MM-DD)" });
+          return res.status(400).json({ error: "Invalid dateOfBirth format (use YYYY-MM-DD)" });
         }
       }
       updates.push("dateOfBirth = ?");
@@ -171,7 +171,7 @@ export default async function handler(
     }
 
     if (updates.length === 0) {
-      return res.status(400).json({ message: "No fields to update" });
+      return res.status(400).json({ error: "No fields to update" });
     }
 
     values.push(patientId, clinicId);
@@ -189,7 +189,7 @@ export default async function handler(
 
       if (result.affectedRows === 0) {
         conn.release();
-        return res.status(404).json({ message: "Patient not found" });
+        return res.status(404).json({ error: "Patient not found" });
       }
 
       // Fetch updated record
@@ -205,12 +205,12 @@ export default async function handler(
 
       return res.status(200).json({
         data: rows[0],
-        message: "Patient updated"
+        error: "Patient updated"
       });
     } catch (err) {
       console.error("PUT patient error:", err);
       try { conn.release(); } catch {}
-      return res.status(500).json({ message: "Internal server error" });
+      return res.status(500).json({ error: "Internal server error" });
     }
   }
 
@@ -223,7 +223,7 @@ export default async function handler(
     const patientId = Array.isArray(idParam) ? idParam[0] : idParam;
 
     if (!patientId) {
-      return res.status(400).json({ message: "patient id is required" });
+      return res.status(400).json({ error: "patient id is required" });
     }
 
     const conn = await getDbConnection();
@@ -239,14 +239,14 @@ export default async function handler(
       conn.release();
 
       if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "Patient not found" });
+        return res.status(404).json({ error: "Patient not found" });
       }
 
-      return res.status(200).json({ message: "Patient deleted" });
+      return res.status(200).json({ error: "Patient deleted" });
     } catch (err) {
       console.error("DELETE patient error:", err);
       try { conn.release(); } catch {}
-      return res.status(500).json({ message: "Internal server error" });
+      return res.status(500).json({ error: "Internal server error" });
     }
   }
 

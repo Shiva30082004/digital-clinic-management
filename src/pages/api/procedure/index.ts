@@ -32,8 +32,8 @@ export default async function handler(
       try {
         conn.release();
       } catch {}
-      return res.status(500).json({ message: "Internal server error" });
+      return res.status(500).json({ error: "Internal server error" });
     }
   }
-  return res.status(405).json({ message: "Method not allowed" });
+  return res.status(405).json({ error: "Method not allowed" });
 }
