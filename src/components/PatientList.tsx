@@ -1,39 +1,32 @@
-import Patient from "@/types/Patient";
 import React, { useState } from "react";
-import { 
-  Search, 
-  Plus, 
-  Phone, 
-  Mail, 
+import {
+  Search,
+  Plus,
+  Phone,
+  Mail,
   Calendar,
   User,
   ChevronRight,
   Filter
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Mock patient data
-// const patients = [
-//   { id: 1, name: "Jahnavi J", age: "XX", status: "active" },
-//   { id: 2, name: "Arjun S", age: "XX", status: "active" },
-//   { id: 3, name: "Grace L", age: "XX", status: "active" },
-//   { id: 4, name: "Shiv B", age: "XX", status: "inactive" },
-//   { id: 5, name: "David D", age: "XX", status: "active" },
-//   { id: 6, name: "Lisa A", age: "XX", status: "active" }
-// ];
-// ];
+const patients = [
+  { id: 1, name: "Jahnavi J", age: "XX", status: "active" },
+  { id: 2, name: "Arjun S", age: "XX", status: "active" },
+  { id: 3, name: "Grace L", age: "XX", status: "active" },
+  { id: 4, name: "Shiv B", age: "XX", status: "inactive" },
+  { id: 5, name: "David D", age: "XX", status: "active" },
+  { id: 6, name: "Lisa A", age: "XX", status: "active" }
+];
 
-export function PatientList({
-  patients = [],
-  onPatientSelect
-}: {
-  patients: Patient[];
-}) {
+export function PatientList({ onPatientSelect }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
@@ -76,8 +69,7 @@ export function PatientList({
           <Card
             key={patient.id}
             className="border-slate-200 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer group"
-            onClick={() => onPatientSelect(patient)}
-          >
+            onClick={() => onPatientSelect(patient)}>
             <CardContent className="p-6">
               <div className="space-y-4">
                 {/* Patient Header */}
@@ -89,8 +81,12 @@ export function PatientList({
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <h3 className="font-semibold text-slate-900">{patient.name}</h3>
-                      <p className="text-sm text-slate-500">Age: {patient.age}</p>
+                      <h3 className="font-semibold text-slate-900">
+                        {patient.name}
+                      </h3>
+                      <p className="text-sm text-slate-500">
+                        Age: {patient.age}
+                      </p>
                     </div>
                   </div>
                   <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-blue-600 transition-colors" />
@@ -100,7 +96,9 @@ export function PatientList({
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center justify-between text-slate-600">
                     <span>Blood Group:</span>
-                    <Badge variant="outline" className="font-mono">A+</Badge>
+                    <Badge variant="outline" className="font-mono">
+                      A+
+                    </Badge>
                   </div>
                   <div className="flex items-center text-slate-600">
                     <Phone className="h-3.5 w-3.5 mr-2" />
@@ -123,8 +121,7 @@ export function PatientList({
                     onClick={(e) => {
                       e.stopPropagation();
                       onPatientSelect(patient);
-                    }}
-                  >
+                    }}>
                     View Profile
                   </Button>
                   <Button
@@ -134,8 +131,7 @@ export function PatientList({
                     onClick={(e) => {
                       e.stopPropagation();
                       // Handle appointment booking
-                    }}
-                  >
+                    }}>
                     <Calendar className="h-4 w-4" />
                   </Button>
                 </div>
@@ -152,7 +148,9 @@ export function PatientList({
             <div className="w-16 h-16 bg-slate-100 rounded-full mx-auto mb-4 flex items-center justify-center">
               <User className="h-8 w-8 text-slate-400" />
             </div>
-            <h3 className="font-semibold text-slate-900 mb-2">No patients found</h3>
+            <h3 className="font-semibold text-slate-900 mb-2">
+              No patients found
+            </h3>
             <p className="text-slate-600 mb-4">
               {searchTerm
                 ? `No patients match "${searchTerm}"`

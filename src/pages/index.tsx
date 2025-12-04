@@ -5,12 +5,10 @@ import { PatientList } from "@/components/PatientList";
 import { PatientProfile } from "@/components/PatientProfile";
 import { ConsultationScreen } from "@/components/ConsultationScreen";
 import { InvoiceManagement } from "@/components/InvoiceManagement";
-import axios from "axios";
-import { getBaseUrl } from "@/utils/server.utils";
-import { 
-  LayoutDashboard, 
-  Users, 
-  FileText, 
+import {
+  LayoutDashboard,
+  Users,
+  FileText,
   LogOut,
   Search,
   UserCog
@@ -26,10 +24,10 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
+  DialogFooter
 } from "@/components/ui/dialog";
 
-export default function App({ patients = [] }) {
+export default function App() {
   const router = useRouter();
   const [currentScreen, setCurrentScreen] = useState("dashboard");
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -38,21 +36,21 @@ export default function App({ patients = [] }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [doctorProfile, setDoctorProfile] = useState({
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'doctor@example.com',
-    specialization: 'General Physician',
-    clinicName: 'DigiClinic',
-    consultationFees: '100'
+    firstName: "John",
+    lastName: "Doe",
+    email: "doctor@example.com",
+    specialization: "General Physician",
+    clinicName: "DigiClinic",
+    consultationFees: "100"
   });
 
   useEffect(() => {
     // Check if user is authenticated
-    const authToken = localStorage.getItem('authToken');
-    
+    const authToken = localStorage.getItem("authToken");
+
     if (!authToken) {
       // Not authenticated, redirect to login
-      router.push('/login');
+      router.push("/login");
     } else {
       // Authenticated, allow access
       setIsAuthenticated(true);
@@ -62,16 +60,16 @@ export default function App({ patients = [] }) {
 
   const handleLogout = () => {
     // Clear auth data
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('authToken');
-    
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("authToken");
+
     // Redirect to login page
-    router.push('/login');
+    router.push("/login");
   };
 
   const handleSaveProfile = () => {
     // TODO: Call API to update doctor profile
-    console.log('Updating profile:', doctorProfile);
+    console.log("Updating profile:", doctorProfile);
     setIsEditProfileOpen(false);
     // Show success message (you can add a toast notification here)
   };
@@ -112,7 +110,6 @@ export default function App({ patients = [] }) {
       case "patients":
         return (
           <PatientList
-            patients={patients}
             onPatientSelect={(patient) => {
               setSelectedPatient(patient);
               setCurrentScreen("patient-profile");
@@ -160,18 +157,24 @@ export default function App({ patients = [] }) {
               <p className="text-xs text-slate-500">Healthcare Management</p>
             </div>
           </div>
-          
+
           {/* Doctor Info */}
           <div className="flex items-center space-x-3 p-3 bg-slate-50 rounded-lg">
             <Avatar className="h-9 w-9">
               <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=doctor" />
-              <AvatarFallback className="bg-blue-100 text-blue-600">DR</AvatarFallback>
+              <AvatarFallback className="bg-blue-100 text-blue-600">
+                DR
+              </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-900 truncate">Dr. Doctor</p>
+              <p className="text-sm font-semibold text-slate-900 truncate">
+                Dr. Doctor
+              </p>
               <p className="text-xs text-slate-500">General Physician</p>
             </div>
-            <Badge variant="secondary" className="text-xs">Admin</Badge>
+            <Badge variant="secondary" className="text-xs">
+              Admin
+            </Badge>
           </div>
         </div>
 
@@ -185,12 +188,11 @@ export default function App({ patients = [] }) {
                 key={item.id}
                 variant={isActive ? "secondary" : "ghost"}
                 className={`w-full justify-start h-11 ${
-                  isActive 
-                    ? "bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium" 
+                  isActive
+                    ? "bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium"
                     : "text-slate-600 hover:bg-slate-50"
                 }`}
-                onClick={() => setCurrentScreen(item.id)}
-              >
+                onClick={() => setCurrentScreen(item.id)}>
                 <Icon className="mr-3 h-5 w-5" />
                 {item.label}
               </Button>
@@ -200,19 +202,17 @@ export default function App({ patients = [] }) {
 
         {/* Bottom Actions */}
         <div className="p-4 border-t border-slate-200 space-y-1">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             className="w-full justify-start h-11 text-slate-600 hover:bg-slate-50"
-            onClick={() => setIsEditProfileOpen(true)}
-          >
+            onClick={() => setIsEditProfileOpen(true)}>
             <UserCog className="mr-3 h-5 w-5" />
             Edit Profile
           </Button>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             className="w-full justify-start h-11 text-red-600 hover:bg-red-50 hover:text-red-700"
-            onClick={handleLogout}
-          >
+            onClick={handleLogout}>
             <LogOut className="mr-3 h-5 w-5" />
             Logout
           </Button>
@@ -225,10 +225,17 @@ export default function App({ patients = [] }) {
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shadow-sm">
           <div>
             <h1 className="text-xl font-bold text-slate-900 capitalize">
-              {currentScreen === "patient-profile" ? selectedPatient?.name || "Patient Profile" : currentScreen}
+              {currentScreen === "patient-profile"
+                ? selectedPatient?.name || "Patient Profile"
+                : currentScreen}
             </h1>
             <p className="text-xs text-slate-500">
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              {new Date().toLocaleDateString("en-US", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric"
+              })}
             </p>
           </div>
         </header>
@@ -255,7 +262,12 @@ export default function App({ patients = [] }) {
                 <Input
                   id="firstName"
                   value={doctorProfile.firstName}
-                  onChange={(e) => setDoctorProfile({ ...doctorProfile, firstName: e.target.value })}
+                  onChange={(e) =>
+                    setDoctorProfile({
+                      ...doctorProfile,
+                      firstName: e.target.value
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -263,7 +275,12 @@ export default function App({ patients = [] }) {
                 <Input
                   id="lastName"
                   value={doctorProfile.lastName}
-                  onChange={(e) => setDoctorProfile({ ...doctorProfile, lastName: e.target.value })}
+                  onChange={(e) =>
+                    setDoctorProfile({
+                      ...doctorProfile,
+                      lastName: e.target.value
+                    })
+                  }
                 />
               </div>
             </div>
@@ -273,7 +290,9 @@ export default function App({ patients = [] }) {
                 id="email"
                 type="email"
                 value={doctorProfile.email}
-                onChange={(e) => setDoctorProfile({ ...doctorProfile, email: e.target.value })}
+                onChange={(e) =>
+                  setDoctorProfile({ ...doctorProfile, email: e.target.value })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -281,7 +300,12 @@ export default function App({ patients = [] }) {
               <Input
                 id="specialization"
                 value={doctorProfile.specialization}
-                onChange={(e) => setDoctorProfile({ ...doctorProfile, specialization: e.target.value })}
+                onChange={(e) =>
+                  setDoctorProfile({
+                    ...doctorProfile,
+                    specialization: e.target.value
+                  })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -289,7 +313,12 @@ export default function App({ patients = [] }) {
               <Input
                 id="clinicName"
                 value={doctorProfile.clinicName}
-                onChange={(e) => setDoctorProfile({ ...doctorProfile, clinicName: e.target.value })}
+                onChange={(e) =>
+                  setDoctorProfile({
+                    ...doctorProfile,
+                    clinicName: e.target.value
+                  })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -300,15 +329,24 @@ export default function App({ patients = [] }) {
                 min="0"
                 step="0.01"
                 value={doctorProfile.consultationFees}
-                onChange={(e) => setDoctorProfile({ ...doctorProfile, consultationFees: e.target.value })}
+                onChange={(e) =>
+                  setDoctorProfile({
+                    ...doctorProfile,
+                    consultationFees: e.target.value
+                  })
+                }
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditProfileOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditProfileOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveProfile} className="bg-blue-600 hover:bg-blue-700">
+            <Button
+              onClick={handleSaveProfile}
+              className="bg-blue-600 hover:bg-blue-700">
               Save Changes
             </Button>
           </DialogFooter>
@@ -316,17 +354,4 @@ export default function App({ patients = [] }) {
       </Dialog>
     </div>
   );
-}
-
-export async function getServerSideProps() {
-  console.log(getBaseUrl());
-  const { data: patients = [] } = await axios.get(
-    `${getBaseUrl()}/api/patient`
-  );
-
-  return {
-    props: {
-      patients
-    }
-  };
 }
