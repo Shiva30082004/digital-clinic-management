@@ -12,7 +12,7 @@ export default async function handler(
 ) {
   const conn = await getDbConnection();
   if (!conn) {
-    return res.status(500).json({ error: "Database connection failed" } as ConsultationResponse);
+    return res.status(500).json({ message: "Database connection failed" } as ConsultationResponse);
   }
 
   try {
@@ -60,7 +60,7 @@ export default async function handler(
 
         if (!appointmentID) {
           return res.status(400).json({
-            error: "appointmentID is required"
+            message: "appointmentID is required"
           } as ConsultationResponse);
         }
 
@@ -122,7 +122,7 @@ export default async function handler(
 
         if (!consultationID) {
           return res.status(400).json({
-            error: "consultationID is required"
+            message: "consultationID is required"
           } as ConsultationResponse);
         }
 
@@ -158,7 +158,7 @@ export default async function handler(
 
         if (result.affectedRows === 0) {
           return res.status(404).json({
-            error: "Consultation not found"
+            message: "Consultation not found"
           } as ConsultationResponse);
         }
 
@@ -177,7 +177,7 @@ export default async function handler(
 
         if (!consultationID) {
           return res.status(400).json({
-            error: "consultationID is required"
+            message: "consultationID is required"
           } as ConsultationResponse);
         }
 
@@ -188,7 +188,7 @@ export default async function handler(
 
         if (result.affectedRows === 0) {
           return res.status(404).json({
-            error: "Consultation not found"
+            message: "Consultation not found"
           } as ConsultationResponse);
         }
 
@@ -201,7 +201,7 @@ export default async function handler(
   } catch (err) {
     console.error(err);
     return res.status(500).json({
-      error: "Internal server error"
+      message: "Internal server error"
     } as ConsultationResponse);
   } finally {
     conn.release();
