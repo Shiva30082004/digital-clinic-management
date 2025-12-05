@@ -26,6 +26,8 @@ import {
   DialogTitle,
   DialogFooter
 } from "@/components/ui/dialog";
+import { getFirebaseAuth } from "@/utils/firebase";
+import { signOut } from "firebase/auth";
 
 export default function App() {
   const router = useRouter();
@@ -58,13 +60,15 @@ export default function App() {
     }
   }, [router]);
 
-  const handleLogout = () => {
-    // Clear auth data
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("authToken");
-
-    // Redirect to login page
-    router.push("/login");
+  const handleLogout = async () => {
+    try {
+      const auth = getFirebaseAuth();
+      await signOut(auth);
+      localStorage.removeItem("authToken");
+      router.push("/login");
+    } catch (err: any) {
+      console.error("Logout error:", err);
+    }
   };
 
   const handleSaveProfile = () => {

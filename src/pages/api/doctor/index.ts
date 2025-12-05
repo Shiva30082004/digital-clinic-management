@@ -2,6 +2,7 @@ import { DOCTOR_ID_HEADER_KEY } from "@/constants/auth";
 import { getDbConnection } from "@/lib/database";
 import ApiResponse from "@/types/ApiResponse";
 import Doctor from "@/types/Doctor";
+import { ResultSetHeader } from "mysql2";
 import type { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(

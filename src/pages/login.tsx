@@ -1,84 +1,38 @@
-import React, { useState } from 'react';
-import { useRouter } from 'next/router';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { getFirebaseAuth } from '@/utils/firebase';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Stethoscope, Lock, Mail } from 'lucide-react';
+import React, { useState } from "react";
+import { useRouter } from "next/router";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { getFirebaseAuth } from "@/utils/firebase";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Stethoscope, Lock, Mail } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [adminCredentials, setAdminCredentials] = useState({
-    email: '',
-    password: ''
-  });
   const [consultantCredentials, setConsultantCredentials] = useState({
-    email: '',
-    password: ''
+    email: "",
+    password: ""
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleAdminLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(adminCredentials.email)) {
-      setError('Please enter a valid email address');
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const auth = getFirebaseAuth();
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        adminCredentials.email,
-        adminCredentials.password
-      );
-
-      // Get the ID token
-      const idToken = await userCredential.user.getIdToken();
-
-      // TODO: Call API to get doctor details and verify role is admin
-      // const response = await fetch('/api/doctor/getDoctorDetails', {
-      //   headers: { 'Authorization': `Bearer ${idToken}` }
-      // });
-      // const doctorData = await response.json();
-      // if (doctorData.role !== 'admin') throw new Error('Not authorized as admin');
-
-      // Store auth info
-      localStorage.setItem('userRole', 'admin');
-      localStorage.setItem('authToken', idToken);
-
-      // Redirect to dashboard
-      router.push('/');
-    } catch (err: any) {
-      console.error('Admin login error:', err);
-      const errorMessage = err.code 
-        ? getFirebaseErrorMessage(err.code)
-        : 'Invalid credentials. Please try again.';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [error, setError] = useState("");
 
   const handleConsultantLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+    setError("");
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(consultantCredentials.email)) {
-      setError('Please enter a valid email address');
+      setError("Please enter a valid email address");
       setIsLoading(false);
       return;
     }
@@ -94,24 +48,16 @@ export default function LoginPage() {
       // Get the ID token
       const idToken = await userCredential.user.getIdToken();
 
-      // TODO: Call API to get doctor details and verify role is consultant
-      // const response = await fetch('/api/doctor/getDoctorDetails', {
-      //   headers: { 'Authorization': `Bearer ${idToken}` }
-      // });
-      // const doctorData = await response.json();
-      // if (doctorData.role !== 'consultant') throw new Error('Not authorized as consultant');
-
       // Store auth info
-      localStorage.setItem('userRole', 'consultant');
-      localStorage.setItem('authToken', idToken);
+      localStorage.setItem("authToken", idToken);
 
       // Redirect to dashboard
-      router.push('/');
+      router.push("/");
     } catch (err: any) {
-      console.error('Consultant login error:', err);
-      const errorMessage = err.code 
+      console.error("Consultant login error:", err);
+      const errorMessage = err.code
         ? getFirebaseErrorMessage(err.code)
-        : 'Invalid credentials. Please try again.';
+        : "Invalid credentials. Please try again.";
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -120,30 +66,29 @@ export default function LoginPage() {
 
   const getFirebaseErrorMessage = (errorCode: string) => {
     switch (errorCode) {
-      case 'auth/invalid-email':
-        return 'Invalid email address.';
-      case 'auth/user-disabled':
-        return 'This account has been disabled.';
-      case 'auth/user-not-found':
-        return 'No account found with this email.';
-      case 'auth/wrong-password':
-        return 'Incorrect password.';
-      case 'auth/invalid-credential':
-        return 'Invalid email or password.';
-      case 'auth/too-many-requests':
-        return 'Too many failed attempts. Please try again later.';
-      case 'auth/weak-password':
-        return 'Password must be at least 6 characters long.';
+      case "auth/invalid-email":
+        return "Invalid email address.";
+      case "auth/user-disabled":
+        return "This account has been disabled.";
+      case "auth/user-not-found":
+        return "No account found with this email.";
+      case "auth/wrong-password":
+        return "Incorrect password.";
+      case "auth/invalid-credential":
+        return "Invalid email or password.";
+      case "auth/too-many-requests":
+        return "Too many failed attempts. Please try again later.";
+      case "auth/weak-password":
+        return "Password must be at least 6 characters long.";
       default:
-        return 'Login failed. Please try again.';
+        return "Login failed. Please try again.";
     }
   };
 
-  const handleDemoLogin = (role: 'admin' | 'consultant') => {
+  const handleDemoLogin = (role: "admin" | "consultant") => {
     // Bypass authentication for testing
-    localStorage.setItem('userRole', role);
-    localStorage.setItem('authToken', 'demo-token');
-    router.push('/');
+    localStorage.setItem("authToken", "demo-token");
+    router.push("/");
   };
 
   return (
@@ -156,96 +101,22 @@ export default function LoginPage() {
               <Stethoscope className="h-8 w-8 text-white" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-slate-900">Clinic Management</h1>
-          <p className="text-slate-600 mt-2">Sign in to access your dashboard</p>
+          <h1 className="text-3xl font-bold text-slate-900">
+            Clinic Management
+          </h1>
+          <p className="text-slate-600 mt-2">
+            Sign in to access your dashboard
+          </p>
         </div>
 
         {/* Login Card */}
         <Card className="border-slate-200 shadow-lg">
           <CardHeader>
             <CardTitle>Doctor Login</CardTitle>
-            <CardDescription>
-              Choose your role and enter your credentials
-            </CardDescription>
+            <CardDescription>Enter your credentials</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="admin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="admin">Admin</TabsTrigger>
-                <TabsTrigger value="consultant">Consultant</TabsTrigger>
-              </TabsList>
-
-              {/* Admin Login */}
-              <TabsContent value="admin">
-                <form onSubmit={handleAdminLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="admin-email">Email Address</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                      <Input
-                        id="admin-email"
-                        type="email"
-                        placeholder="admin@clinic.com"
-                        className="pl-10"
-                        value={adminCredentials.email}
-                        onChange={(e) => setAdminCredentials({ ...adminCredentials, email: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="admin-password">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                      <Input
-                        id="admin-password"
-                        type="password"
-                        placeholder="••••••••"
-                        className="pl-10"
-                        value={adminCredentials.password}
-                        onChange={(e) => setAdminCredentials({ ...adminCredentials, password: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {error && (
-                    <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
-                      {error}
-                    </div>
-                  )}
-
-                  <Button
-                    type="submit"
-                    className="w-full bg-blue-600 hover:bg-blue-700"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Signing in...' : 'Sign in as Admin'}
-                  </Button>
-
-                  <div className="relative my-4">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white px-2 text-muted-foreground">
-                        Or for testing
-                      </span>
-                    </div>
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => handleDemoLogin('admin')}
-                  >
-                    Skip Login (Demo Admin)
-                  </Button>
-                </form>
-              </TabsContent>
-
+            <Tabs defaultValue="consultant" className="w-full">
               {/* Consultant Login */}
               <TabsContent value="consultant">
                 <form onSubmit={handleConsultantLogin} className="space-y-4">
@@ -259,7 +130,12 @@ export default function LoginPage() {
                         placeholder="doctor@clinic.com"
                         className="pl-10"
                         value={consultantCredentials.email}
-                        onChange={(e) => setConsultantCredentials({ ...consultantCredentials, email: e.target.value })}
+                        onChange={(e) =>
+                          setConsultantCredentials({
+                            ...consultantCredentials,
+                            email: e.target.value
+                          })
+                        }
                         required
                       />
                     </div>
@@ -275,7 +151,12 @@ export default function LoginPage() {
                         placeholder="••••••••"
                         className="pl-10"
                         value={consultantCredentials.password}
-                        onChange={(e) => setConsultantCredentials({ ...consultantCredentials, password: e.target.value })}
+                        onChange={(e) =>
+                          setConsultantCredentials({
+                            ...consultantCredentials,
+                            password: e.target.value
+                          })
+                        }
                         required
                       />
                     </div>
@@ -290,29 +171,8 @@ export default function LoginPage() {
                   <Button
                     type="submit"
                     className="w-full bg-blue-600 hover:bg-blue-700"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Signing in...' : 'Sign in as Consultant'}
-                  </Button>
-
-                  <div className="relative my-4">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white px-2 text-muted-foreground">
-                        Or for testing
-                      </span>
-                    </div>
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => handleDemoLogin('consultant')}
-                  >
-                    Skip Login (Demo Consultant)
+                    disabled={isLoading}>
+                    {isLoading ? "Signing in..." : "Sign in"}
                   </Button>
                 </form>
               </TabsContent>
@@ -320,7 +180,12 @@ export default function LoginPage() {
 
             {/* Footer */}
             <div className="mt-6 text-center text-sm text-slate-600">
-              <p>Don't have an account? <a href="/signup" className="text-blue-600 hover:underline">Sign up here</a></p>
+              <p>
+                Don't have an account?{" "}
+                <a href="/signup" className="text-blue-600 hover:underline">
+                  Sign up here
+                </a>
+              </p>
             </div>
           </CardContent>
         </Card>

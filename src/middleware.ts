@@ -12,8 +12,6 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  return NextResponse.next();
-
   const requestHeaders = new Headers(req.headers);
   const token = requestHeaders.get("x-authorization");
 
