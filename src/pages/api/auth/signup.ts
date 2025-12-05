@@ -16,7 +16,7 @@ export default async function handler(
       role = "consultant",
       specialization = "",
       clinicName = "",
-      clinicID = "",
+      clinicId = "",
       zipcode = "",
       consultationFees = 0
     } = req.body || {};
@@ -25,7 +25,7 @@ export default async function handler(
 
     if (!conn) return res.status(500).end();
 
-    let _clinicID = 0;
+    let _clinicId = 0;
 
     if (role === "admin") {
       if (!clinicName || !zipcode) {
@@ -38,17 +38,17 @@ export default async function handler(
         "INSERT INTO Clinics(ClinicName, Zipcode) VALUES (?, ?)";
       const createClinicValues = [clinicName, zipcode];
 
-      const [{ insertId: newClinicID = 0 } = {}] =
+      const [{ insertId: newClinicId = 0 } = {}] =
         await conn.execute<ResultSetHeader>(
           createClinicQuery,
           createClinicValues
         );
-      _clinicID = newClinicID;
+      _clinicId = newClinicId;
     } else {
-      if (!clinicID) {
+      if (!clinicId) {
         return res.status(400).json({ error: "ClinicID is required" });
       }
-      _clinicID = clinicID;
+      _clinicId = clinicId;
     }
 
     const createDoctorQuery =
@@ -60,17 +60,17 @@ export default async function handler(
       specialization,
       consultationFees,
       role,
-      _clinicID
+      _clinicId
     ];
 
-    const [{ insertId: newDoctorID = 0 } = {}] =
+    const [{ insertId: newDoctorId = 0 } = {}] =
       await conn.execute<ResultSetHeader>(
         createDoctorQuery,
         createDoctorValues
       );
 
-    const query = "SELECT * FROM Doctors WHERE DoctorID = ?;";
-    const values = [newDoctorID];
+    const query = "SELECT * FROM Doctors WHERE doctorId = ?;";
+    const values = [newDoctorId];
 
     const [rows] = await conn.execute<Doctor[]>(query, values);
 

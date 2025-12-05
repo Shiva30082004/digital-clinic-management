@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { getFirebaseAuth } from "@/utils/firebase";
+import { checkAuthStatus, getFirebaseAuth } from "@/utils/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +51,10 @@ export default function SignupPage() {
 
   const { invokeRequest } = useApiCall();
 
+  useEffect(() => {
+    checkAuthStatus("/signup", router);
+  }, []);
+
   const handleAdminSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -95,19 +99,11 @@ export default function SignupPage() {
       });
 
       const auth = getFirebaseAuth();
-      const userCredential = await createUserWithEmailAndPassword(
+      await createUserWithEmailAndPassword(
         auth,
         adminSignup.email,
         adminSignup.password
       );
-
-      // Get the ID token
-      const idToken = await userCredential.user.getIdToken();
-
-      console.log("Admin signup:", adminSignup);
-
-      // Store auth info
-      localStorage.setItem("authToken", idToken);
 
       // Redirect to dashboard
       router.push("/");
@@ -165,19 +161,11 @@ export default function SignupPage() {
       });
 
       const auth = getFirebaseAuth();
-      const userCredential = await createUserWithEmailAndPassword(
+      await createUserWithEmailAndPassword(
         auth,
         consultantSignup.email,
         consultantSignup.password
       );
-
-      // Get the ID token
-      const idToken = await userCredential.user.getIdToken();
-
-      console.log("Consultant signup:", consultantSignup);
-
-      // Store auth info
-      localStorage.setItem("authToken", idToken);
 
       // Redirect to dashboard
       router.push("/");

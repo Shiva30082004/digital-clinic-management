@@ -28,58 +28,79 @@ import {
 } from "@/components/ui/dialog";
 import { getFirebaseAuth } from "@/utils/firebase";
 import { signOut } from "firebase/auth";
+import useApiCall from "@/hooks/useApiCall";
 
 export default function App() {
   const router = useRouter();
   const [currentScreen, setCurrentScreen] = useState("dashboard");
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [doctorProfile, setDoctorProfile] = useState({
-    firstName: "John",
-    lastName: "Doe",
-    email: "doctor@example.com",
-    specialization: "General Physician",
-    clinicName: "DigiClinic",
-    consultationFees: "100"
+    firstName: "",
+    lastName: "",
+    emailAddress: "",
+    specialization: "",
+    clinicName: "",
+    zipcode: "",
+    consultationFees: 0
   });
 
-  useEffect(() => {
-    // Check if user is authenticated
-    const authToken = localStorage.getItem("authToken");
+  const {
+    isLoading = false,
+    isSuccess = false,
+    data: doctorProfileData = {},
+    refetch
+  } = useApiCall({
+    request: {
+      endpoint: "/api/doctor",
+      method: "GET"
+    },
+    fetchOnMount: true
+  });
 
-    if (!authToken) {
-      // Not authenticated, redirect to login
-      router.push("/login");
-    } else {
-      // Authenticated, allow access
-      setIsAuthenticated(true);
-      setIsLoading(false);
+  const { invokeRequest: invokeSaveProfile } = useApiCall();
+
+  useEffect(() => {
+    if (isSuccess && doctorProfileData) {
+      setDoctorProfile({
+        firstName: doctorProfileData.firstName,
+        lastName: doctorProfileData.lastName,
+        emailAddress: doctorProfileData.emailAddress,
+        specialization: doctorProfileData.specialization,
+        clinicName: doctorProfileData.clinicName,
+        zipcode: doctorProfileData.zipcode,
+        consultationFees: doctorProfileData.consultationFees
+      });
     }
-  }, [router]);
+  }, [isSuccess, doctorProfileData]);
 
   const handleLogout = async () => {
     try {
       const auth = getFirebaseAuth();
       await signOut(auth);
-      localStorage.removeItem("authToken");
       router.push("/login");
     } catch (err: any) {
       console.error("Logout error:", err);
     }
   };
 
-  const handleSaveProfile = () => {
-    // TODO: Call API to update doctor profile
-    console.log("Updating profile:", doctorProfile);
-    setIsEditProfileOpen(false);
-    // Show success message (you can add a toast notification here)
+  const handleSaveProfile = async () => {
+    try {
+      await invokeSaveProfile({
+        endpoint: "/api/doctor",
+        payload: doctorProfile,
+        method: "PUT"
+      });
+      refetch();
+      setIsEditProfileOpen(false);
+    } catch (e) {
+      console.log("Error updating profile:", e);
+    }
   };
 
   // Show loading or nothing while checking auth
-  if (isLoading || !isAuthenticated) {
+  if (isLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-slate-50">
         <div className="text-center">
@@ -157,7 +178,9 @@ export default function App() {
               DC
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900">DigiClinic</h2>
+              <h2 className="text-lg font-bold text-slate-900">
+                {doctorProfileData?.clinicName || ""}
+              </h2>
               <p className="text-xs text-slate-500">Healthcare Management</p>
             </div>
           </div>
@@ -172,12 +195,15 @@ export default function App() {
             </Avatar>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-900 truncate">
-                Dr. Doctor
+                Dr. {doctorProfileData?.firstName || ""}{" "}
+                {doctorProfileData?.lastName || ""}
               </p>
-              <p className="text-xs text-slate-500">General Physician</p>
+              <p className="text-xs text-slate-500">
+                {doctorProfileData?.specialization || ""}
+              </p>
             </div>
             <Badge variant="secondary" className="text-xs">
-              Admin
+              {doctorProfileData?.role === "admin" ? "Admin" : "Consultant"}
             </Badge>
           </div>
         </div>
@@ -289,14 +315,15 @@ export default function App() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="emailAddress">Email Address</Label>
               <Input
-                id="email"
-                type="email"
-                value={doctorProfile.email}
-                onChange={(e) =>
-                  setDoctorProfile({ ...doctorProfile, email: e.target.value })
-                }
+                id="emailAddress"
+                type="emailAddress"
+                value={doctorProfile.emailAddress}
+                disabled
+                // onChange={(e) =>
+                //   setDoctorProfile({ ...doctorProfile, emailAddress: e.target.value })
+                // }
               />
             </div>
             <div className="space-y-2">
@@ -312,19 +339,36 @@ export default function App() {
                 }
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="clinicName">Clinic Name</Label>
-              <Input
-                id="clinicName"
-                value={doctorProfile.clinicName}
-                onChange={(e) =>
-                  setDoctorProfile({
-                    ...doctorProfile,
-                    clinicName: e.target.value
-                  })
-                }
-              />
-            </div>
+            {doctorProfileData?.role === "admin" && (
+              <div className="space-y-2">
+                <Label htmlFor="clinicName">Clinic Name</Label>
+                <Input
+                  id="clinicName"
+                  value={doctorProfile.clinicName}
+                  onChange={(e) =>
+                    setDoctorProfile({
+                      ...doctorProfile,
+                      clinicName: e.target.value
+                    })
+                  }
+                />
+              </div>
+            )}
+            {doctorProfileData?.role === "admin" && (
+              <div className="space-y-2">
+                <Label htmlFor="zipcode">Zipcode</Label>
+                <Input
+                  id="zipcode"
+                  value={doctorProfile.zipcode}
+                  onChange={(e) =>
+                    setDoctorProfile({
+                      ...doctorProfile,
+                      zipcode: e.target.value
+                    })
+                  }
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="consultationFees">Consultation Fees ($)</Label>
               <Input
@@ -336,7 +380,9 @@ export default function App() {
                 onChange={(e) =>
                   setDoctorProfile({
                     ...doctorProfile,
-                    consultationFees: e.target.value
+                    consultationFees: Number.isNaN(e.target.value)
+                      ? 0
+                      : Number(e.target.value)
                   })
                 }
               />

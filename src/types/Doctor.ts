@@ -1,13 +1,13 @@
 import { RowDataPacket } from "mysql2";
 
 interface Doctor extends RowDataPacket {
-  doctorID: string;
+  doctorId: string;
   firstName: string;
   lastName: string;
   emailAddress: string;
   role: string;
   specialization: string;
-  clinicID: string;
+  clinicId: string;
   consultationFees: number;
 }
 

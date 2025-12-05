@@ -1,5 +1,7 @@
+import { checkAuthStatus } from "@/utils/firebase";
 import axios, { Method } from "axios";
-import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import { useEffect, useRef, useState } from "react";
 
 type RequestOptions = {
   endpoint: string;
@@ -15,42 +17,53 @@ const useApiCall = <Response>({
   request?: RequestOptions;
   fetchOnMount?: boolean;
 } = {}) => {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState<Response | null>(null);
   const [error, setError] = useState("");
+  const isApiInProgressRef = useRef(false);
 
-  const apiClient = axios.create({
-    headers: {
-      "X-Authorization": ""
-    },
-    validateStatus: () => true
-  });
+  const invokeRequest = async (
+    request: RequestOptions,
+    disableLoading = false
+  ) => {
+    if (isApiInProgressRef.current) return;
 
-  apiClient.interceptors.response.use((response) => {
-    const { data: _data = {}, error: _error = "" } = response?.data || {};
+    isApiInProgressRef.current = true;
+    const token = await checkAuthStatus(request.endpoint, router);
 
-    const err = _error || response.status >= 400;
-
-    if (err) {
-      setError(_error);
-      setData(null);
-    } else {
-      setError("");
-      setData(_data);
-    }
-    setIsLoading(false);
-
-    return err ? Promise.reject(_error) : Promise.resolve(_data);
-  });
-
-  const invokeRequest = async (request: RequestOptions) => {
-    setIsLoading(true);
+    if (!disableLoading) setIsLoading(true);
     const {
       endpoint = "",
       payload = {},
       method = "GET",
       params = {}
     } = request || {};
+
+    const apiClient = axios.create({
+      headers: {
+        "X-Authorization": token
+      },
+      validateStatus: () => true
+    });
+
+    apiClient.interceptors.response.use((response) => {
+      const { data: _data = {}, error: _error = "" } = response?.data || {};
+
+      const err = _error || response.status >= 400;
+
+      if (err) {
+        setError(_error);
+        setData(null);
+      } else {
+        setError("");
+        setData(_data);
+      }
+      setIsLoading(false);
+      isApiInProgressRef.current = false;
+
+      return err ? Promise.reject(_error) : Promise.resolve(_data);
+    });
 
     switch (method) {
       case "GET":
@@ -75,11 +88,12 @@ const useApiCall = <Response>({
         break;
       default:
         setIsLoading(false);
+        isApiInProgressRef.current = false;
     }
   };
 
   const refetch = async () => {
-    if (request) await invokeRequest(request);
+    if (request) await invokeRequest(request, true);
   };
 
   useEffect(() => {

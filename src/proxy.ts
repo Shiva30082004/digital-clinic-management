@@ -5,7 +5,7 @@ import { getDbConnection } from "@/lib/database";
 import { getAuthHeaders } from "@/utils/auth.utils";
 import Doctor from "@/types/Doctor";
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (pathname.includes("/auth")) {
@@ -15,8 +15,7 @@ export async function middleware(req: NextRequest) {
   const requestHeaders = new Headers(req.headers);
   const token = requestHeaders.get("x-authorization");
 
-  if (!token)
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  if (!token) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const auth = getFirebaseAdminAuth();
 
@@ -36,7 +35,7 @@ export async function middleware(req: NextRequest) {
   }
 
   const query =
-    "SELECT DoctorId, ClinicId, Role FROM Doctors WHERE EmailAddress = ?;";
+    "SELECT doctorId, clinicId, role FROM Doctors WHERE emailAddress = ?;";
   const values = [email];
 
   const [rows] = await conn.execute<Doctor[]>(query, values);

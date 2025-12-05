@@ -8,8 +8,8 @@ import Doctor from "@/types/Doctor";
 export function getAuthHeaders(user: Partial<Doctor>, headers: Headers) {
   if (!user) return headers;
 
-  headers.set(DOCTOR_ID_HEADER_KEY, user.doctorID!);
-  headers.set(CLINIC_ID_HEADER_KEY, user.clinicID!);
+  headers.set(DOCTOR_ID_HEADER_KEY, user.doctorId!);
+  headers.set(CLINIC_ID_HEADER_KEY, user.clinicId!);
   headers.set(ROLE_HEADER_KEY, user.role!);
 
   return headers;

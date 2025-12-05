@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { getFirebaseAuth } from "@/utils/firebase";
+import { checkAuthStatus, getFirebaseAuth } from "@/utils/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +24,10 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    checkAuthStatus("/login", router);
+  }, []);
+
   const handleConsultantLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -39,17 +43,11 @@ export default function LoginPage() {
 
     try {
       const auth = getFirebaseAuth();
-      const userCredential = await signInWithEmailAndPassword(
+      await signInWithEmailAndPassword(
         auth,
         consultantCredentials.email,
         consultantCredentials.password
       );
-
-      // Get the ID token
-      const idToken = await userCredential.user.getIdToken();
-
-      // Store auth info
-      localStorage.setItem("authToken", idToken);
 
       // Redirect to dashboard
       router.push("/");
@@ -83,12 +81,6 @@ export default function LoginPage() {
       default:
         return "Login failed. Please try again.";
     }
-  };
-
-  const handleDemoLogin = (role: "admin" | "consultant") => {
-    // Bypass authentication for testing
-    localStorage.setItem("authToken", "demo-token");
-    router.push("/");
   };
 
   return (
@@ -189,11 +181,6 @@ export default function LoginPage() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Demo Info */}
-        <div className="mt-4 text-center text-xs text-slate-500">
-          <p>Demo credentials will be provided by your administrator</p>
-        </div>
       </div>
     </div>
   );
