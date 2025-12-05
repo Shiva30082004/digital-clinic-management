@@ -14,7 +14,7 @@ const useApiCall = <Response>({
 }: {
   request?: RequestOptions;
   fetchOnMount?: boolean;
-}) => {
+} = {}) => {
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState<Response | null>(null);
   const [error, setError] = useState("");
@@ -29,7 +29,9 @@ const useApiCall = <Response>({
   apiClient.interceptors.response.use((response) => {
     const { data: _data = {}, error: _error = "" } = response?.data || {};
 
-    if (_error) {
+    const err = _error || response.status >= 400;
+
+    if (err) {
       setError(_error);
       setData(null);
     } else {
@@ -38,7 +40,7 @@ const useApiCall = <Response>({
     }
     setIsLoading(false);
 
-    return _error ? Promise.reject(_error) : Promise.resolve(_data);
+    return err ? Promise.reject(_error) : Promise.resolve(_data);
   });
 
   const invokeRequest = async (request: RequestOptions) => {
@@ -60,14 +62,17 @@ const useApiCall = <Response>({
         await apiClient.post(endpoint, payload, {
           params
         });
+        break;
       case "PUT":
         await apiClient.put(endpoint, payload, {
           params
         });
+        break;
       case "DELETE":
         await apiClient.delete(endpoint, {
           params
         });
+        break;
       default:
         setIsLoading(false);
     }
