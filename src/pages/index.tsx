@@ -175,7 +175,9 @@ export default function App() {
         <div className="p-6 border-b border-slate-200">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
-              DC
+              {(
+                (doctorProfileData?.clinicName || "").split(" ")?.[0] || ""
+              ).slice(0, 2)}
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-900">

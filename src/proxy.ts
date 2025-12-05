@@ -56,6 +56,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: "/api/:route*",
-  runtime: "nodejs"
+  matcher: "/api/:route*"
 };
