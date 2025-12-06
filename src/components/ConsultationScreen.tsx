@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import useApiCall from "@/hooks/useApiCall";
-
 import {
   X,
   Save,
@@ -24,13 +22,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 
-type ConsultationScreenProps = {
-  appointment: any;           // 先用 any 顶着，之后你想细化再说
-  onComplete: () => void;
-  onCancel: () => void;
-};
+{/* NEW */}
+import ProcedureSearch from '@/components/ui/ProcedureSearch';
+import type { Procedure } from '@/types/Procedure';
 
-export function ConsultationScreen({ appointment, onComplete, onCancel } : ConsultationScreenProps) {
+export function ConsultationScreen({ appointment, onComplete, onCancel }) {
   const [vitals, setVitals] = useState({
     bloodPressure: '',
     heartRate: '',
@@ -46,149 +42,12 @@ export function ConsultationScreen({ appointment, onComplete, onCancel } : Consu
     treatment: '',
     prescription: ''
   });
+  
+  const [selectedProcedures, setSelectedProcedures] = useState<Procedure[]>([]);
 
-  const appointmentId =
-    appointment?.appointmentID ??
-    appointment?.AppointmentID ??
-    appointment?.id ??
-    null;
-
-  const appointmentStatus =
-    appointment?.appointmentStatus ??
-    appointment?.AppointmentStatus ??
-    appointment?.status ??
-    appointment?.Status ??
-    null;
-
-
-  //2
-  const {
-    data: consultationData,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    invokeRequest
-  } = useApiCall({
-    request:
-      appointmentId != null
-        ? {
-            endpoint: "/api/consultation",
-            method: "GET",
-            params: { appointmentID: appointmentId }
-          }
-        : undefined,
-    fetchOnMount: appointmentId != null
-  });
-  const { invokeRequest: invokeStatusUpdate } = useApiCall({
-    request: undefined,
-    fetchOnMount: false
-  });
-
-  const currentConsultation = Array.isArray(consultationData)
-    ? consultationData[0] ?? null
-    : consultationData ?? null;
-
-
-  //3
-  React.useEffect(() => {
-    if (!currentConsultation) return;
-
-    setVitals({
-      bloodPressure:
-        currentConsultation.SystolicBP != null &&
-        currentConsultation.DiastolicBP != null
-          ? `${currentConsultation.SystolicBP}/${currentConsultation.DiastolicBP}`
-          : '',
-      heartRate:
-        currentConsultation.HeartRate != null
-          ? String(currentConsultation.HeartRate)
-          : '',
-      temperature:
-        currentConsultation.Temperature != null
-          ? String(currentConsultation.Temperature)
-          : '',
-      weight:
-        currentConsultation.Weight != null
-          ? String(currentConsultation.Weight)
-          : ''
-    });
-
-    setConsultation((prev) => ({
-      ...prev,
-      chiefComplaint: currentConsultation.ChiefComplaints ?? '',
-      diagnosis: currentConsultation.Diagnosis ?? ''
-    }));
-  }, [currentConsultation]);
-
-
-
-  //4- fake code here
-  const handleSaveConsultation = async (completeAfterSave: boolean) => {{
-    if (!appointmentId) {
-      console.warn("No appointmentId, cannot save consultation");
-      return;
-    }
-
-    // 解析血压字符串为数值
-    let systolicBP = null;
-    let diastolicBP = null;
-    if (vitals.bloodPressure && vitals.bloodPressure.includes("/")) {
-      const [s, d] = vitals.bloodPressure.split("/");
-      systolicBP = Number(s.trim()) || null;
-      diastolicBP = Number(d.trim()) || null;
-    }
-
-    const hasExisting = !!currentConsultation;
-
-    const payload = {
-      appointmentID: appointmentId,
-      heartRate: vitals.heartRate ? Number(vitals.heartRate) : null,
-      respiratoryRate: currentConsultation?.RespiratoryRate ?? null,
-      temperature: vitals.temperature
-        ? Number(vitals.temperature)
-        : currentConsultation?.Temperature ?? null,
-      bloodOxygen: currentConsultation?.BloodOxygen ?? null,
-      systolicBP,
-      diastolicBP,
-      weight: vitals.weight
-        ? Number(vitals.weight)
-        : currentConsultation?.Weight ?? null,
-      height: currentConsultation?.Height ?? null,
-      chiefComplaints: consultation.chiefComplaint,
-      diagnosis: consultation.diagnosis
-    };
-
-    try {
-      // 有就 PUT，没就 POST
-      await invokeRequest({
-        endpoint: "/api/consultation",
-        method: hasExisting ? "PUT" : "POST",
-        payload
-      });
-
-      // 如果要顺便把预约标记成 COM，调 status API
-      if (completeAfterSave) {
-        await invokeStatusUpdate({
-          endpoint: `/api/appointments/status?id=${appointmentId}`,
-          method: "PATCH",
-          payload: {
-            appointmentStatus: "COM"
-          }
-        });
-      }
-
-      await refetch();
-      if (completeAfterSave) {
-        onComplete && onComplete();
-      }
-    } catch (e) {
-      console.error("Failed to save consultation", e);
-    }
+  const handleProcedureSelect = (proc: Procedure) => {
+    setSelectedProcedures((prev) => [...prev, proc]);
   };
-
-  //5
-
 
   if (!appointment) {
     return (
@@ -218,7 +77,7 @@ export function ConsultationScreen({ appointment, onComplete, onCancel } : Consu
           </Button>
           <Button 
             className="bg-blue-600 hover:bg-blue-700"
-            onClick={() => handleSaveConsultation(true)}
+            onClick={onComplete}
           >
             <CheckCircle className="mr-2 h-4 w-4" />
             Complete Consultation
@@ -362,6 +221,36 @@ export function ConsultationScreen({ appointment, onComplete, onCancel } : Consu
               </div>
             </CardContent>
           </Card>
+
+          {/* NEW: Procedures search + list */}
+          <Card className="border-slate-200">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Pill className="mr-2 h-5 w-5 text-emerald-600" />
+                Procedures Performed
+              </CardTitle>
+              <CardDescription>
+                Search and add procedures performed during this consultation
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ProcedureSearch onSelect={handleProcedureSelect} />
+
+              {selectedProcedures.length > 0 && (
+                <div className="space-y-2">
+                  {selectedProcedures.map((p) => (
+                    <div
+                      key={p.procedureId}
+                      className="flex items-center justify-between rounded border px-3 py-2 text-sm"
+                    >
+                      <span>{p.procedureName}</span>
+                      <span className="font-mono text-slate-700">${p.amount}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Quick Actions Sidebar */}
@@ -420,7 +309,7 @@ export function ConsultationScreen({ appointment, onComplete, onCancel } : Consu
                 <FileText className="mr-2 h-4 w-4" />
                 Generate Prescription
               </Button>
-              <Button variant="outline" >
+              <Button variant="outline">
                 <Save className="mr-2 h-4 w-4" />
                 Save as Draft
               </Button>
@@ -437,5 +326,4 @@ export function ConsultationScreen({ appointment, onComplete, onCancel } : Consu
       </Card>
     </div>
   );
-}
 }
