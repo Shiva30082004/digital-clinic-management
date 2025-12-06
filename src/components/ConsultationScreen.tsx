@@ -22,6 +22,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 
+{/* NEW */}
+import ProcedureSearch from '@/components/ui/ProcedureSearch';
+import type { Procedure } from '@/types/Procedure';
+
 export function ConsultationScreen({ appointment, onComplete, onCancel }) {
   const [vitals, setVitals] = useState({
     bloodPressure: '',
@@ -38,6 +42,12 @@ export function ConsultationScreen({ appointment, onComplete, onCancel }) {
     treatment: '',
     prescription: ''
   });
+  
+  const [selectedProcedures, setSelectedProcedures] = useState<Procedure[]>([]);
+
+  const handleProcedureSelect = (proc: Procedure) => {
+    setSelectedProcedures((prev) => [...prev, proc]);
+  };
 
   if (!appointment) {
     return (
@@ -209,6 +219,36 @@ export function ConsultationScreen({ appointment, onComplete, onCancel }) {
                   onChange={(e) => setConsultation({...consultation, diagnosis: e.target.value})}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* NEW: Procedures search + list */}
+          <Card className="border-slate-200">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Pill className="mr-2 h-5 w-5 text-emerald-600" />
+                Procedures Performed
+              </CardTitle>
+              <CardDescription>
+                Search and add procedures performed during this consultation
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ProcedureSearch onSelect={handleProcedureSelect} />
+
+              {selectedProcedures.length > 0 && (
+                <div className="space-y-2">
+                  {selectedProcedures.map((p) => (
+                    <div
+                      key={p.procedureId}
+                      className="flex items-center justify-between rounded border px-3 py-2 text-sm"
+                    >
+                      <span>{p.procedureName}</span>
+                      <span className="font-mono text-slate-700">${p.amount}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
