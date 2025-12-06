@@ -173,6 +173,11 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
     }
   };
 
+  // Refetch current appointments - always uses current selectedDate
+  const refetchAppointments = () => {
+    fetchAppointments(selectedDate);
+  };
+
   // Fetch appointments on mount and when date changes
   useEffect(() => {
     fetchAppointments(selectedDate);
@@ -227,7 +232,7 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
       });
 
       // Refresh appointments list
-      fetchAppointments(selectedDate);
+      refetchAppointments();
 
     } catch (error) {
       console.error('Failed to create appointment:', error);
@@ -246,7 +251,7 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
       });
       console.log('Appointment deleted successfully:', appointmentId);
       // Refresh appointments list
-      fetchAppointments(selectedDate);
+      refetchAppointments();
     } catch (error) {
       console.error('Failed to delete appointment:', error);
     }
@@ -264,7 +269,7 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
       });
       console.log('Appointment status updated:', appointmentId, newStatus);
       // Refresh appointments list
-      fetchAppointments(selectedDate);
+      refetchAppointments();
     } catch (error) {
       console.error('Failed to update appointment status:', error);
     }
