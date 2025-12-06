@@ -15,6 +15,22 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Mock patient data
 const patients = [
@@ -29,6 +45,32 @@ const patients = [
 export function PatientList({ onPatientSelect }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
+  const [newPatient, setNewPatient] = useState({
+    firstName: "",
+    lastName: "",
+    dateOfBirth: "",
+    gender: "",
+    bloodGroup: "",
+    phoneNumber: "",
+    email: ""
+  });
+
+  const handleAddPatient = () => {
+    // TODO: Call API to add new patient
+    console.log('Adding new patient:', newPatient);
+    setIsAddPatientOpen(false);
+    // Reset form
+    setNewPatient({
+      firstName: "",
+      lastName: "",
+      dateOfBirth: "",
+      gender: "",
+      bloodGroup: "",
+      phoneNumber: "",
+      email: ""
+    });
+  };
 
   const filteredPatients = patients.filter((patient) =>
     patient.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -42,7 +84,7 @@ export function PatientList({ onPatientSelect }) {
           <h1 className="text-3xl font-bold text-slate-900 mb-1">Patients</h1>
           <p className="text-slate-600">{patients.length} total patients</p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700">
+        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setIsAddPatientOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Add New Patient
         </Button>
@@ -164,6 +206,129 @@ export function PatientList({ onPatientSelect }) {
           </CardContent>
         </Card>
       )}
+
+      {/* Add Patient Dialog */}
+      <Dialog open={isAddPatientOpen} onOpenChange={setIsAddPatientOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Patient</DialogTitle>
+            <DialogDescription>
+              Enter the patient's information below. All fields marked with * are required.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {/* Name Fields */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name *</Label>
+                <Input
+                  id="firstName"
+                  value={newPatient.firstName}
+                  onChange={(e) => setNewPatient({ ...newPatient, firstName: e.target.value })}
+                  placeholder="John"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name *</Label>
+                <Input
+                  id="lastName"
+                  value={newPatient.lastName}
+                  onChange={(e) => setNewPatient({ ...newPatient, lastName: e.target.value })}
+                  placeholder="Doe"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Date of Birth and Gender */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+                <Input
+                  id="dateOfBirth"
+                  type="date"
+                  value={newPatient.dateOfBirth}
+                  onChange={(e) => setNewPatient({ ...newPatient, dateOfBirth: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="gender">Gender *</Label>
+                <Select
+                  value={newPatient.gender}
+                  onValueChange={(value) => setNewPatient({ ...newPatient, gender: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Blood Group */}
+            <div className="space-y-2">
+              <Label htmlFor="bloodGroup">Blood Group</Label>
+              <Select
+                value={newPatient.bloodGroup}
+                onValueChange={(value) => setNewPatient({ ...newPatient, bloodGroup: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select blood group" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="A+">A+</SelectItem>
+                  <SelectItem value="A-">A-</SelectItem>
+                  <SelectItem value="B+">B+</SelectItem>
+                  <SelectItem value="B-">B-</SelectItem>
+                  <SelectItem value="AB+">AB+</SelectItem>
+                  <SelectItem value="AB-">AB-</SelectItem>
+                  <SelectItem value="O+">O+</SelectItem>
+                  <SelectItem value="O-">O-</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Contact Information */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="phoneNumber">Phone Number *</Label>
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  value={newPatient.phoneNumber}
+                  onChange={(e) => setNewPatient({ ...newPatient, phoneNumber: e.target.value })}
+                  placeholder="+1 (555) 123-4567"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={newPatient.email}
+                  onChange={(e) => setNewPatient({ ...newPatient, email: e.target.value })}
+                  placeholder="john.doe@email.com"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddPatientOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddPatient} className="bg-blue-600 hover:bg-blue-700">
+              Add Patient
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
