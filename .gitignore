@@ -40,3 +40,6 @@ gcp_keys.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local files
+_local-*
