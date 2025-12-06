@@ -165,12 +165,12 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
   };
 
   // Fetch appointments for selected date
-  const fetchAppointments = async (date: Date) => {
+  const fetchAppointments = async (date: Date, forceRefresh = false) => {
     try {
       const dateStr = formatDateForApi(date);
       
-      // Skip fetch if we already have data for this date
-      if (dateStr === lastFetchedDate && appointments.length > 0) {
+      // Skip fetch if we already have data for this date (unless forced)
+      if (!forceRefresh && dateStr === lastFetchedDate && appointments.length > 0) {
         console.log('Skipping fetch - data already loaded for', dateStr);
         return;
       }
@@ -195,8 +195,7 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
 
   // Refetch current appointments - always uses current selectedDate
   const refetchAppointments = () => {
-    setLastFetchedDate(''); // Clear cache to force refetch
-    fetchAppointments(selectedDate);
+    fetchAppointments(selectedDate, true); // true = force refresh
   };
 
   // Fetch appointments on mount and when date changes
@@ -244,22 +243,8 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
       // Small delay to ensure database write completes
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Force refetch by clearing cache first
-      setLastFetchedDate(''); // Clear cache
-      
-      // Force fetch by bypassing cache check
-      const dateStr = formatDateForApi(selectedDate);
-      await fetchAppointmentsRequest({
-        endpoint: '/api/appointments/byDate',
-        method: 'GET',
-        params: {
-          startDate: dateStr,
-          endDate: dateStr
-        }
-      });
-      
-      // Update cache after successful fetch
-      setLastFetchedDate(dateStr);
+      // Force refetch of current date
+      await fetchAppointments(selectedDate, true); // true = force refresh
       
       // Close dialog and reset form after successful creation and refresh
       setIsNewAppointmentOpen(false);
