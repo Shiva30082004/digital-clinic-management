@@ -36,7 +36,7 @@ export default async function handler(
   }
 
   try {
-    // Build query with optional status filter - JOIN with Patient table for names
+    // Build query with optional status filter - JOIN with Patients table for names
     let query = `
       SELECT 
         a.AppointmentID as appointmentID,
@@ -48,7 +48,7 @@ export default async function handler(
         p.FirstName as patientFirstName,
         p.LastName as patientLastName
       FROM Appointments a
-      LEFT JOIN Patient p ON a.PatientID = p.PatientID
+      LEFT JOIN Patients p ON a.PatientID = p.PatientID
       WHERE a.DoctorID = ?
         AND DATE(a.StartTime) >= ?
         AND DATE(a.StartTime) <= ?
