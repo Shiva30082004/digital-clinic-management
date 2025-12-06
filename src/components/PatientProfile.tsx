@@ -435,11 +435,9 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
 
       {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-4" onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="appointments">Appointments</TabsTrigger>
           <TabsTrigger value="vitals">Vitals & Charts</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -540,60 +538,6 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
           </Card>
         </TabsContent>
 
-        <TabsContent value="appointments" className="space-y-4">
-          <Card className="border-slate-200">
-            <CardHeader>
-              <CardTitle>Appointment History</CardTitle>
-              <CardDescription>All appointments for this patient</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {appointmentHistory.map((appointment) => (
-                  <div 
-                    key={appointment.id}
-                    className="border border-slate-200 rounded-lg p-4 hover:border-slate-300 transition-colors"
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h4 className="font-semibold text-slate-900">{appointment.type}</h4>
-                        <p className="text-sm text-slate-600 mt-1">
-                          <Clock className="inline h-3 w-3 mr-1" />
-                          {appointment.date} at {appointment.time}
-                        </p>
-                      </div>
-                      <Badge variant="secondary" className={getStatusColor(appointment.status)}>
-                        {appointment.status}
-                      </Badge>
-                    </div>
-                    <Separator className="my-3" />
-                    <div className="flex space-x-2">
-                      {(appointment.status === 'Booked' || appointment.status === 'Active') && (
-                        <Button 
-                          size="sm" 
-                          onClick={() => onStartConsultation(appointment)}
-                        >
-                          Start Consultation
-                        </Button>
-                      )}
-                      {appointment.status === 'Completed' && (
-                        <>
-                          <Button variant="outline" size="sm">
-                            View Details
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Download className="mr-1 h-3 w-3" />
-                            Download
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="vitals" className="space-y-6">
           <Card className="border-slate-200">
             <CardHeader>
@@ -649,51 +593,6 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-
-        <TabsContent value="documents" className="space-y-4">
-          <Card className="border-slate-200">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Medical Documents</CardTitle>
-                  <CardDescription>Prescriptions, reports, and certificates</CardDescription>
-                </div>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Upload Document
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {mockDocuments.map((doc) => (
-                  <div 
-                    key={doc.id}
-                    className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                        <FileText className="h-5 w-5 text-red-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-900">{doc.name}</p>
-                        <p className="text-sm text-slate-500">{doc.type} • {doc.date}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Button variant="ghost" size="icon">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>

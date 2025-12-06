@@ -92,6 +92,7 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [appointments, setAppointments] = useState<any[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
+  const [lastFetchedDate, setLastFetchedDate] = useState<string>('');
   const [newAppointment, setNewAppointment] = useState({
     patientId: '',
     date: '',
@@ -167,6 +168,13 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
   const fetchAppointments = async (date: Date) => {
     try {
       const dateStr = formatDateForApi(date);
+      
+      // Skip fetch if we already have data for this date
+      if (dateStr === lastFetchedDate && appointments.length > 0) {
+        console.log('Skipping fetch - data already loaded for', dateStr);
+        return;
+      }
+      
       await fetchAppointmentsRequest({
         endpoint: '/api/appointments/byDate',
         method: 'GET',
@@ -175,6 +183,8 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
           endDate: dateStr
         }
       });
+      
+      setLastFetchedDate(dateStr);
       
       // The data will be set via the useApiCall hook's data state
     } catch (error) {
@@ -185,6 +195,7 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
 
   // Refetch current appointments - always uses current selectedDate
   const refetchAppointments = () => {
+    setLastFetchedDate(''); // Clear cache to force refetch
     fetchAppointments(selectedDate);
   };
 
@@ -230,7 +241,25 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
 
       console.log('Appointment created successfully:', newAppointment);
       
-      // Close dialog and reset form
+      // Small delay to ensure database write completes
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Check if appointment date matches selected date
+      const appointmentDate = new Date(newAppointment.date);
+      const selectedDateStr = formatDateForApi(selectedDate);
+      const appointmentDateStr = formatDateForApi(appointmentDate);
+      
+      // If appointment is on a different date, switch to that date
+      if (appointmentDateStr !== selectedDateStr) {
+        setSelectedDate(appointmentDate);
+        // The useEffect will automatically fetch appointments for the new date
+      } else {
+        // If on same date, clear cache and refetch
+        setLastFetchedDate('');
+        await fetchAppointments(selectedDate);
+      }
+      
+      // Close dialog and reset form after successful creation and refresh
       setIsNewAppointmentOpen(false);
       setNewAppointment({
         patientId: '',
@@ -238,9 +267,6 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
         startTime: '',
         endTime: ''
       });
-
-      // Refresh appointments list
-      refetchAppointments();
 
     } catch (error) {
       console.error('Failed to create appointment:', error);
@@ -332,7 +358,7 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
           </div>
         </CardHeader>
         <CardContent>
-          {isLoadingAppointments ? (
+          {isLoadingAppointments && appointments.length === 0 ? (
             <div className="flex justify-center items-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
