@@ -48,18 +48,18 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [newAppointment, setNewAppointment] = useState({
-    date: '',
-    startTime: '',
-    endTime: '',
-    status: 'Booked'
+    date: "",
+    startTime: "",
+    endTime: "",
+    status: "Booked"
   });
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editedPatient, setEditedPatient] = useState({
-    firstName: '',
-    lastName: '',
-    emailAddress: '',
-    dateOfBirth: '',
-    bloodGroup: ''
+    firstName: "",
+    lastName: "",
+    emailAddress: "",
+    dateOfBirth: "",
+    bloodGroup: ""
   });
 
   // Update appointments when data changes
@@ -154,33 +154,29 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
 
   // Initialize edit form when modal opens
   const handleEditClick = () => {
-    // TODO: BACKEND INTEGRATION - Fetch actual patient data from API
-    // Example: const response = await fetch(`/api/patient/${patient.id}`);
-    // const patientData = await response.json();
-    const nameParts = patient.name.split(' ');
     setEditedPatient({
-      firstName: nameParts[0] || '',
-      lastName: nameParts.slice(1).join(' ') || '',
-      emailAddress: patient.name.toLowerCase().replace(' ', '.') + '@email.com',
-      dateOfBirth: '', // TODO: Load from backend
-      bloodGroup: 'A+' // TODO: Load from backend
+      firstName: patient.firstName || "",
+      lastName: patient.lastName || "" || "",
+      emailAddress: patient.emailAddress || "",
+      dateOfBirth: patient.dateOfBirth ? new Date(patient.dateOfBirth) : "",
+      bloodGroup: "A+" // TODO: Load from backend
     });
     setShowEditProfile(true);
   };
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'completed':
-        return 'bg-green-100 text-green-700 hover:bg-green-100';
-      case 'booked':
-      case 'scheduled':
-        return 'bg-blue-100 text-blue-700 hover:bg-blue-100';
-      case 'active':
-        return 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100';
-      case 'cancelled':
-        return 'bg-red-100 text-red-700 hover:bg-red-100';
+      case "completed":
+        return "bg-green-100 text-green-700 hover:bg-green-100";
+      case "booked":
+      case "scheduled":
+        return "bg-blue-100 text-blue-700 hover:bg-blue-100";
+      case "active":
+        return "bg-yellow-100 text-yellow-700 hover:bg-yellow-100";
+      case "cancelled":
+        return "bg-red-100 text-red-700 hover:bg-red-100";
       default:
-        return 'bg-slate-100 text-slate-700 hover:bg-slate-100';
+        return "bg-slate-100 text-slate-700 hover:bg-slate-100";
     }
   };
 
@@ -189,19 +185,17 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button 
+          <Button
             variant="ghost"
             onClick={onBack}
-            className="hover:bg-slate-100"
-          >
+            className="hover:bg-slate-100">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
         </div>
-        <Button 
+        <Button
           className="bg-blue-600 hover:bg-blue-700"
-          onClick={() => setShowNewAppointment(true)}
-        >
+          onClick={() => setShowNewAppointment(true)}>
           <Plus className="mr-2 h-4 w-4" />
           New Appointment
         </Button>
@@ -217,13 +211,14 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
                   <Calendar className="mr-2 h-5 w-5 text-blue-600" />
                   Schedule New Appointment
                 </CardTitle>
-                <CardDescription>Create a new appointment for {patient.name}</CardDescription>
+                <CardDescription>
+                  Create a new appointment for {patientName}
+                </CardDescription>
               </div>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="icon"
-                onClick={() => setShowNewAppointment(false)}
-              >
+                onClick={() => setShowNewAppointment(false)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -233,12 +228,16 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
               {/* Patient Name Display */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-sm text-slate-600">Patient</p>
-                <p className="text-lg font-semibold text-slate-900">{patient.name}</p>
+                <p className="text-lg font-semibold text-slate-900">
+                  {patientName}
+                </p>
               </div>
 
               {/* Appointment Date */}
               <div className="space-y-2">
-                <Label htmlFor="appointmentDate" className="flex items-center text-slate-700">
+                <Label
+                  htmlFor="appointmentDate"
+                  className="flex items-center text-slate-700">
                   <Calendar className="mr-2 h-4 w-4 text-blue-500" />
                   Date
                 </Label>
@@ -246,7 +245,12 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
                   id="appointmentDate"
                   type="date"
                   value={newAppointment.date}
-                  onChange={(e) => setNewAppointment({ ...newAppointment, date: e.target.value })}
+                  onChange={(e) =>
+                    setNewAppointment({
+                      ...newAppointment,
+                      date: e.target.value
+                    })
+                  }
                   className="border-slate-300"
                 />
               </div>
@@ -254,7 +258,9 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
               {/* Start Time and End Time */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="startTime" className="flex items-center text-slate-700">
+                  <Label
+                    htmlFor="startTime"
+                    className="flex items-center text-slate-700">
                     <Clock className="mr-2 h-4 w-4 text-blue-500" />
                     Start Time
                   </Label>
@@ -262,12 +268,19 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
                     id="startTime"
                     type="time"
                     value={newAppointment.startTime}
-                    onChange={(e) => setNewAppointment({ ...newAppointment, startTime: e.target.value })}
+                    onChange={(e) =>
+                      setNewAppointment({
+                        ...newAppointment,
+                        startTime: e.target.value
+                      })
+                    }
                     className="border-slate-300"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="endTime" className="flex items-center text-slate-700">
+                  <Label
+                    htmlFor="endTime"
+                    className="flex items-center text-slate-700">
                     <Clock className="mr-2 h-4 w-4 text-blue-500" />
                     End Time
                   </Label>
@@ -275,7 +288,12 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
                     id="endTime"
                     type="time"
                     value={newAppointment.endTime}
-                    onChange={(e) => setNewAppointment({ ...newAppointment, endTime: e.target.value })}
+                    onChange={(e) =>
+                      setNewAppointment({
+                        ...newAppointment,
+                        endTime: e.target.value
+                      })
+                    }
                     className="border-slate-300"
                   />
                 </div>
@@ -289,9 +307,13 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
                 <select
                   id="appointmentStatus"
                   value={newAppointment.status}
-                  onChange={(e) => setNewAppointment({ ...newAppointment, status: e.target.value })}
-                  className="w-full h-10 px-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
+                  onChange={(e) =>
+                    setNewAppointment({
+                      ...newAppointment,
+                      status: e.target.value
+                    })
+                  }
+                  className="w-full h-10 px-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="Booked">Booked</option>
                   <option value="Active">Active</option>
                   <option value="Completed">Completed</option>
@@ -302,28 +324,36 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
               <Separator />
 
               <div className="flex justify-end space-x-2">
-                <Button 
+                <Button
                   variant="outline"
                   onClick={() => {
                     setShowNewAppointment(false);
-                    setNewAppointment({ date: '', startTime: '', endTime: '', status: 'Booked' });
-                  }}
-                >
+                    setNewAppointment({
+                      date: "",
+                      startTime: "",
+                      endTime: "",
+                      status: "Booked"
+                    });
+                  }}>
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   className="bg-blue-600 hover:bg-blue-700"
                   onClick={() => {
                     // TODO: BACKEND INTEGRATION - Save appointment to database
                     // Example: await fetch('/api/appointments', { method: 'POST', body: JSON.stringify({ patientId: patient.id, ...newAppointment }) });
-                    console.log('New appointment:', {
-                      patientName: patient.name,
+                    console.log("New appointment:", {
+                      patientName: patientName,
                       ...newAppointment
                     });
                     setShowNewAppointment(false);
-                    setNewAppointment({ date: '', startTime: '', endTime: '', status: 'Booked' });
-                  }}
-                >
+                    setNewAppointment({
+                      date: "",
+                      startTime: "",
+                      endTime: "",
+                      status: "Booked"
+                    });
+                  }}>
                   <Calendar className="mr-2 h-4 w-4" />
                   Schedule Appointment
                 </Button>
@@ -345,11 +375,10 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
                 </CardTitle>
                 <CardDescription>Update patient information</CardDescription>
               </div>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="icon"
-                onClick={() => setShowEditProfile(false)}
-              >
+                onClick={() => setShowEditProfile(false)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -358,7 +387,9 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
             <div className="space-y-4">
               {/* First Name */}
               <div className="space-y-2">
-                <Label htmlFor="firstName" className="flex items-center text-slate-700">
+                <Label
+                  htmlFor="firstName"
+                  className="flex items-center text-slate-700">
                   <User className="mr-2 h-4 w-4 text-blue-500" />
                   First Name
                 </Label>
@@ -366,7 +397,12 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
                   id="firstName"
                   type="text"
                   value={editedPatient.firstName}
-                  onChange={(e) => setEditedPatient({ ...editedPatient, firstName: e.target.value })}
+                  onChange={(e) =>
+                    setEditedPatient({
+                      ...editedPatient,
+                      firstName: e.target.value
+                    })
+                  }
                   className="border-slate-300"
                   placeholder="Enter first name"
                 />
@@ -374,7 +410,9 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
 
               {/* Last Name */}
               <div className="space-y-2">
-                <Label htmlFor="lastName" className="flex items-center text-slate-700">
+                <Label
+                  htmlFor="lastName"
+                  className="flex items-center text-slate-700">
                   <User className="mr-2 h-4 w-4 text-blue-500" />
                   Last Name
                 </Label>
@@ -382,7 +420,12 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
                   id="lastName"
                   type="text"
                   value={editedPatient.lastName}
-                  onChange={(e) => setEditedPatient({ ...editedPatient, lastName: e.target.value })}
+                  onChange={(e) =>
+                    setEditedPatient({
+                      ...editedPatient,
+                      lastName: e.target.value
+                    })
+                  }
                   className="border-slate-300"
                   placeholder="Enter last name"
                 />
@@ -390,7 +433,9 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
 
               {/* Email Address */}
               <div className="space-y-2">
-                <Label htmlFor="emailAddress" className="flex items-center text-slate-700">
+                <Label
+                  htmlFor="emailAddress"
+                  className="flex items-center text-slate-700">
                   <Mail className="mr-2 h-4 w-4 text-blue-500" />
                   Email Address
                 </Label>
@@ -398,7 +443,12 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
                   id="emailAddress"
                   type="email"
                   value={editedPatient.emailAddress}
-                  onChange={(e) => setEditedPatient({ ...editedPatient, emailAddress: e.target.value })}
+                  onChange={(e) =>
+                    setEditedPatient({
+                      ...editedPatient,
+                      emailAddress: e.target.value
+                    })
+                  }
                   className="border-slate-300"
                   placeholder="patient@email.com"
                 />
@@ -407,7 +457,9 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
               {/* Date of Birth and Blood Group */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="dateOfBirth" className="flex items-center text-slate-700">
+                  <Label
+                    htmlFor="dateOfBirth"
+                    className="flex items-center text-slate-700">
                     <Calendar className="mr-2 h-4 w-4 text-blue-500" />
                     Date of Birth
                   </Label>
@@ -415,21 +467,32 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
                     id="dateOfBirth"
                     type="date"
                     value={editedPatient.dateOfBirth}
-                    onChange={(e) => setEditedPatient({ ...editedPatient, dateOfBirth: e.target.value })}
+                    onChange={(e) =>
+                      setEditedPatient({
+                        ...editedPatient,
+                        dateOfBirth: e.target.value
+                      })
+                    }
                     className="border-slate-300"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="bloodGroup" className="flex items-center text-slate-700">
+                  <Label
+                    htmlFor="bloodGroup"
+                    className="flex items-center text-slate-700">
                     <Activity className="mr-2 h-4 w-4 text-blue-500" />
                     Blood Group
                   </Label>
                   <select
                     id="bloodGroup"
                     value={editedPatient.bloodGroup}
-                    onChange={(e) => setEditedPatient({ ...editedPatient, bloodGroup: e.target.value })}
-                    className="w-full h-10 px-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
+                    onChange={(e) =>
+                      setEditedPatient({
+                        ...editedPatient,
+                        bloodGroup: e.target.value
+                      })
+                    }
+                    className="w-full h-10 px-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="A+">A+</option>
                     <option value="A-">A-</option>
                     <option value="B+">B+</option>
@@ -445,24 +508,28 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
               <Separator />
 
               <div className="flex justify-end space-x-2">
-                <Button 
+                <Button
                   variant="outline"
                   onClick={() => {
                     setShowEditProfile(false);
-                    setEditedPatient({ firstName: '', lastName: '', emailAddress: '', dateOfBirth: '', bloodGroup: '' });
-                  }}
-                >
+                    setEditedPatient({
+                      firstName: "",
+                      lastName: "",
+                      emailAddress: "",
+                      dateOfBirth: "",
+                      bloodGroup: ""
+                    });
+                  }}>
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   className="bg-blue-600 hover:bg-blue-700"
                   onClick={() => {
                     // TODO: BACKEND INTEGRATION - Update patient details in database
                     // Example: await fetch(`/api/patient/${patient.id}`, { method: 'PUT', body: JSON.stringify(editedPatient) });
-                    console.log('Updated patient details:', editedPatient);
+                    console.log("Updated patient details:", editedPatient);
                     setShowEditProfile(false);
-                  }}
-                >
+                  }}>
                   <Save className="mr-2 h-4 w-4" />
                   Save Changes
                 </Button>
@@ -478,33 +545,32 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${patient.name}`} />
                 <AvatarFallback className="bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700 text-2xl font-semibold">
-                  {patient.name.charAt(0)}
+                  {patientName.charAt(0)}
                 </AvatarFallback>
               </Avatar>
               <div className="space-y-2">
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900">{patient.name}</h2>
-                  <p className="text-slate-500">Patient ID: P{patient.id}</p>
+                  <h2 className="text-2xl font-bold text-slate-900">
+                    {patientName}
+                  </h2>
+                  <p className="text-slate-500">
+                    Patient ID: P{patient.patientId || ""}
+                  </p>
                 </div>
                 <div className="flex items-center space-x-4 text-sm">
                   <Badge variant="outline" className="font-normal">
                     <User className="mr-1 h-3 w-3" />
-                    Age: {patient.age || 45}
+                    Age: {patient.age || ""}
                   </Badge>
                   <Badge variant="outline" className="font-normal font-mono">
-                    Blood: A+
+                    Gender: {patient.gender || "M"}
                   </Badge>
                 </div>
                 <div className="flex items-center space-x-4 text-sm text-slate-600">
                   <div className="flex items-center">
-                    <Phone className="mr-1.5 h-3.5 w-3.5" />
-                    +1 (555) 123-4567
-                  </div>
-                  <div className="flex items-center">
                     <Mail className="mr-1.5 h-3.5 w-3.5" />
-                    {patient.name.toLowerCase().replace(' ', '.')}@email.com
+                    {patient.emailAddress || ""}
                   </div>
                 </div>
               </div>
@@ -529,7 +595,9 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card className="border-slate-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">Total Visits</CardTitle>
+                <CardTitle className="text-sm font-medium text-slate-600">
+                  Total Visits
+                </CardTitle>
                 <Calendar className="h-4 w-4 text-blue-600" />
               </CardHeader>
               <CardContent>
@@ -540,7 +608,9 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
 
             <Card className="border-slate-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">Blood Pressure</CardTitle>
+                <CardTitle className="text-sm font-medium text-slate-600">
+                  Blood Pressure
+                </CardTitle>
                 <Activity className="h-4 w-4 text-red-600" />
               </CardHeader>
               <CardContent>
@@ -551,7 +621,9 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
 
             <Card className="border-slate-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">Heart Rate</CardTitle>
+                <CardTitle className="text-sm font-medium text-slate-600">
+                  Heart Rate
+                </CardTitle>
                 <Heart className="h-4 w-4 text-pink-600" />
               </CardHeader>
               <CardContent>
@@ -562,7 +634,9 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
 
             <Card className="border-slate-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">Weight</CardTitle>
+                <CardTitle className="text-sm font-medium text-slate-600">
+                  Weight
+                </CardTitle>
                 <Weight className="h-4 w-4 text-purple-600" />
               </CardHeader>
               <CardContent>
@@ -718,14 +792,18 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
                 <TrendingUp className="mr-2 h-5 w-5 text-blue-600" />
                 Vital Signs Trends
               </CardTitle>
-              <CardDescription>Historical data and trends over time</CardDescription>
+              <CardDescription>
+                Historical data and trends over time
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="h-80 bg-gradient-to-br from-blue-50 to-slate-50 rounded-lg flex items-center justify-center border border-slate-200">
                 <div className="text-center text-slate-500">
                   <Activity className="h-16 w-16 mx-auto mb-4 text-blue-400" />
                   <p className="text-lg font-medium">Vitals Chart</p>
-                  <p className="text-sm mt-2">Blood Pressure, Heart Rate, Weight trends</p>
+                  <p className="text-sm mt-2">
+                    Blood Pressure, Heart Rate, Weight trends
+                  </p>
                 </div>
               </div>
             </CardContent>

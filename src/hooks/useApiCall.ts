@@ -65,30 +65,34 @@ const useApiCall = <Response>({
       return err ? Promise.reject(_error) : Promise.resolve(_data);
     });
 
-    switch (method) {
-      case "GET":
-        await apiClient.get(endpoint, {
-          params
-        });
-        break;
-      case "POST":
-        await apiClient.post(endpoint, payload, {
-          params
-        });
-        break;
-      case "PUT":
-        await apiClient.put(endpoint, payload, {
-          params
-        });
-        break;
-      case "DELETE":
-        await apiClient.delete(endpoint, {
-          params
-        });
-        break;
-      default:
-        setIsLoading(false);
-        isApiInProgressRef.current = false;
+    try {
+      switch (method) {
+        case "GET":
+          await apiClient.get(endpoint, {
+            params
+          });
+          break;
+        case "POST":
+          await apiClient.post(endpoint, payload, {
+            params
+          });
+          break;
+        case "PUT":
+          await apiClient.put(endpoint, payload, {
+            params
+          });
+          break;
+        case "DELETE":
+          await apiClient.delete(endpoint, {
+            params
+          });
+          break;
+        default:
+      }
+    } catch {
+    } finally {
+      setIsLoading(false);
+      isApiInProgressRef.current = false;
     }
   };
 
@@ -101,7 +105,7 @@ const useApiCall = <Response>({
       // eslint-disable-next-line react-hooks/set-state-in-effect
       invokeRequest(request);
     }
-  }, [fetchOnMount]);
+  }, [fetchOnMount, JSON.stringify(request)]);
 
   return {
     isLoading,

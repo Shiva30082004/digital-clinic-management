@@ -16,6 +16,7 @@ export default async function handler(
   if (req.method === "GET") {
     const clinicId = req.headers[CLINIC_ID_HEADER_KEY] as string;
     const idParam = req.query.id;
+    const searchParam = req.query.search || "";
     const patientId = Array.isArray(idParam) ? idParam[0] : idParam;
 
     const conn = await getDbConnection();
@@ -39,11 +40,24 @@ export default async function handler(
           return res.status(404).json({ error: "Patient not found" });
         }
 
-        return res.status(200).json({ data: rows[0] });
-      }
+        return res.status(200).json({ data: rows[0] || {} });
+      } else if (searchParam) {
+        const query = `
+        SELECT patientId, firstName, lastName, emailAddress, gender, dateOfBirth,
+               TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE()) AS age,
+               clinicId
+        FROM Patients
+        WHERE clinicId = ? AND LOWER(CONCAT(firstName, ' ', lastName)) LIKE ?
+        ORDER BY firstName, lastName
+      `;
+        const values = [clinicId, `%${(searchParam as string).toLowerCase()}%`];
+        const [rows] = await conn.execute<Patient[]>(query, values);
+        conn.release();
 
-      // List all patients
-      const query = `
+        return res.status(200).json({ data: rows });
+      } else {
+        // List all patients
+        const query = `
         SELECT patientId, firstName, lastName, emailAddress, gender, dateOfBirth,
                TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE()) AS age,
                clinicId
@@ -51,14 +65,17 @@ export default async function handler(
         WHERE clinicId = ?
         ORDER BY firstName, lastName
       `;
-      const values = [clinicId];
-      const [rows] = await conn.execute<Patient[]>(query, values);
-      conn.release();
+        const values = [clinicId];
+        const [rows] = await conn.execute<Patient[]>(query, values);
+        conn.release();
 
-      return res.status(200).json({ data: rows });
+        return res.status(200).json({ data: rows });
+      }
     } catch (err) {
       console.error("GET patients error:", err);
-      try { conn.release(); } catch {}
+      try {
+        conn.release();
+      } catch {}
       return res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -68,19 +85,24 @@ export default async function handler(
   //
   if (req.method === "POST") {
     const clinicId = req.headers[CLINIC_ID_HEADER_KEY] as string;
-    const { firstName, lastName, emailAddress, gender, dateOfBirth } = req.body ?? {};
+    const { firstName, lastName, emailAddress, gender, dateOfBirth } =
+      req.body ?? {};
 
     // Validate required fields
     if (!firstName) {
       return res.status(400).json({ error: "firstName is required" });
     }
     if (!gender || !ALLOWED_GENDERS.includes(gender)) {
-      return res.status(400).json({ error: "gender is required and must be 'M' or 'F'" });
+      return res
+        .status(400)
+        .json({ error: "gender is required and must be 'M' or 'F'" });
     }
     if (dateOfBirth) {
       const d = new Date(dateOfBirth);
       if (Number.isNaN(d.getTime())) {
-        return res.status(400).json({ error: "Invalid dateOfBirth format (use YYYY-MM-DD)" });
+        return res
+          .status(400)
+          .json({ error: "Invalid dateOfBirth format (use YYYY-MM-DD)" });
       }
     }
 
@@ -112,7 +134,10 @@ export default async function handler(
         FROM Patients
         WHERE patientId = ? AND clinicId = ?
       `;
-      const [rows] = await conn.execute<Patient[]>(fetchQuery, [insertedId, clinicId]);
+      const [rows] = await conn.execute<Patient[]>(fetchQuery, [
+        insertedId,
+        clinicId
+      ]);
       conn.release();
 
       return res.status(201).json({
@@ -121,7 +146,9 @@ export default async function handler(
       });
     } catch (err) {
       console.error("POST patient error:", err);
-      try { conn.release(); } catch {}
+      try {
+        conn.release();
+      } catch {}
       return res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -131,7 +158,14 @@ export default async function handler(
   //
   if (req.method === "PUT") {
     const clinicId = req.headers[CLINIC_ID_HEADER_KEY] as string;
-    const { patientId, firstName, lastName, emailAddress, gender, dateOfBirth } = req.body ?? {};
+    const {
+      patientId,
+      firstName,
+      lastName,
+      emailAddress,
+      gender,
+      dateOfBirth
+    } = req.body ?? {};
 
     if (!patientId) {
       return res.status(400).json({ error: "patientId is required" });
@@ -163,7 +197,9 @@ export default async function handler(
       if (dateOfBirth !== null) {
         const d = new Date(dateOfBirth);
         if (Number.isNaN(d.getTime())) {
-          return res.status(400).json({ error: "Invalid dateOfBirth format (use YYYY-MM-DD)" });
+          return res
+            .status(400)
+            .json({ error: "Invalid dateOfBirth format (use YYYY-MM-DD)" });
         }
       }
       updates.push("dateOfBirth = ?");
@@ -200,7 +236,10 @@ export default async function handler(
         FROM Patients
         WHERE patientId = ? AND clinicId = ?
       `;
-      const [rows] = await conn.execute<Patient[]>(fetchQuery, [patientId, clinicId]);
+      const [rows] = await conn.execute<Patient[]>(fetchQuery, [
+        patientId,
+        clinicId
+      ]);
       conn.release();
 
       return res.status(200).json({
@@ -209,7 +248,9 @@ export default async function handler(
       });
     } catch (err) {
       console.error("PUT patient error:", err);
-      try { conn.release(); } catch {}
+      try {
+        conn.release();
+      } catch {}
       return res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -245,7 +286,9 @@ export default async function handler(
       return res.status(200).json({ error: "Patient deleted" });
     } catch (err) {
       console.error("DELETE patient error:", err);
-      try { conn.release(); } catch {}
+      try {
+        conn.release();
+      } catch {}
       return res.status(500).json({ error: "Internal server error" });
     }
   }

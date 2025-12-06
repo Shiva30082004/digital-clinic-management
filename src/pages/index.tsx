@@ -33,7 +33,7 @@ import useApiCall from "@/hooks/useApiCall";
 export default function App() {
   const router = useRouter();
   const [currentScreen, setCurrentScreen] = useState("dashboard");
-  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [selectedPatientId, setSelectedPatientId] = useState("");
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [doctorProfile, setDoctorProfile] = useState({
@@ -122,8 +122,8 @@ export default function App() {
       case "dashboard":
         return (
           <DoctorDashboard
-            onPatientSelect={(patient) => {
-              setSelectedPatient(patient);
+            onPatientSelect={(patientId) => {
+              setSelectedPatientId(patientId);
               setCurrentScreen("patient-profile");
             }}
             onStartConsultation={(appointment) => {
@@ -135,8 +135,8 @@ export default function App() {
       case "patients":
         return (
           <PatientList
-            onPatientSelect={(patient) => {
-              setSelectedPatient(patient);
+            onPatientSelect={(patientId) => {
+              setSelectedPatientId(patientId);
               setCurrentScreen("patient-profile");
             }}
           />
@@ -144,7 +144,7 @@ export default function App() {
       case "patient-profile":
         return (
           <PatientProfile
-            patient={selectedPatient}
+            patientId={selectedPatientId}
             onBack={() => setCurrentScreen("patients")}
             onStartConsultation={(appointment) => {
               setSelectedAppointment(appointment);
@@ -198,7 +198,7 @@ export default function App() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-900 truncate">
                 Dr. {doctorProfileData?.firstName || ""}{" "}
-                {doctorProfileData?.lastName || ""}
+                {/* {doctorProfileData?.lastName || ""} */}
               </p>
               <p className="text-xs text-slate-500">
                 {doctorProfileData?.specialization || ""}
@@ -258,7 +258,7 @@ export default function App() {
           <div>
             <h1 className="text-xl font-bold text-slate-900 capitalize">
               {currentScreen === "patient-profile"
-                ? selectedPatient?.name || "Patient Profile"
+                ? "Patient Profile"
                 : currentScreen}
             </h1>
             <p className="text-xs text-slate-500">
