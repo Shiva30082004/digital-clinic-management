@@ -4,6 +4,14 @@ import ApiResponse from "@/types/ApiResponse";
 import Document from "@/types/Document";
 import type { NextApiRequest, NextApiResponse } from "next";
 import fs from "fs";
+import { getDbConnection } from "@/lib/database";
+import Appointment from "@/types/Appointment";
+import Procedure from "@/types/Procedure";
+import Consultation from "@/types/Consultation";
+import Invoice from "@/types/Invoice";
+import Doctor from "@/types/Doctor";
+import Patient from "@/types/Patient";
+import Clinic from "@/types/Clinic";
 
 const baseTemplate = fs.readFileSync(
   "./src/templates/prescription.html",
@@ -15,37 +23,120 @@ export default async function handler(
   res: NextApiResponse<ApiResponse<Document>>
 ) {
   if (req.method === "GET") {
-    const doctorID = req.headers[DOCTOR_ID_HEADER_KEY] as string;
-    const clinicID = req.headers[CLINIC_ID_HEADER_KEY] as string;
-    // const { appointmentID = "" } = req.body;
+    const doctorId = req.headers[DOCTOR_ID_HEADER_KEY] as string;
+    const clinicId = req.headers[CLINIC_ID_HEADER_KEY] as string;
+    const { appointmentId = "" } = req.body;
 
-    // if (!appointmentID) {
-    //   return res.status(400).json({
-    //     error: "AppointmentID is required"
-    //   });
-    // }
+    if (!appointmentId) {
+      return res.status(400).json({
+        error: "AppointmentID is required"
+      });
+    }
+
+    const conn = await getDbConnection();
+
+    if (!conn) return res.status(500).end();
+
+    const appointmentQuery =
+      "SELECT CONCAT(d.firstName, ' ', d.lastName) AS doctor_name, d.emailAddress AS doctor_email, specialization, consultationFees, clinicName AS clinic_name, zipcode AS clinic_address, CONCAT(p.firstName, ' ', p.lastName) AS patient_name, TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE()) AS patient_age, gender AS patient_gender FROM Appointments NATURAL JOIN Doctors d NATURAL JOIN Patients p NATURAL JOIN Clinics WHERE appointmentId = ? AND doctorId = ? AND clinicId = ?";
+    const appointmentValues = [appointmentId, doctorId, clinicId];
+
+    const [appointments] = await conn.execute<
+      (Appointment & Doctor & Patient & Clinic)[]
+    >(appointmentQuery, appointmentValues);
+
+    if (appointments.length === 0) {
+      conn.release();
+      return res.status(404).json({ error: "Appointment not found" });
+    }
+
+    const [
+      {
+        doctor_name = "",
+        doctor_email = "",
+        specialization = "",
+        consultationFees = 0,
+        clinic_name = "",
+        clinic_address = "",
+        patient_name = "",
+        patient_age = "",
+        patient_gender = ""
+      } = {}
+    ] = appointments || [];
+
+    const consultationQuery =
+      "SELECT * FROM Consultations NATURAL JOIN Invoices WHERE appointmentId = ?";
+    const consultationValues = [appointmentId];
+
+    const [
+      [
+        {
+          consultationID: consultationId = "",
+          heartRate = "",
+          respiratoryRate = "",
+          temperature = "",
+          bloodOxygen = "",
+          systolicBP = "",
+          diastolicBP = "",
+          weight = "",
+          height = "",
+          chiefComplaints: chief_complaints = "",
+          diagnosis = "",
+          amount: invoice_total = 0
+        } = {}
+      ]
+    ] = await conn.execute<(Consultation & Invoice)[]>(
+      consultationQuery,
+      consultationValues
+    );
+
+    const proceduresQuery =
+      "SELECT * FROM ConsultationProcedures NATURAL JOIN Procedures WHERE consultationId = ?";
+    const proceduresValues = [consultationId];
+
+    const [procedureRows = []] = await conn.execute<Procedure[]>(
+      proceduresQuery,
+      proceduresValues
+    );
+
+    const vitals = [];
+
+    if (temperature) vitals.push(`Temperature: ${temperature} C`);
+    if (weight) vitals.push(`Weight: ${weight}kg`);
+    if (height) vitals.push(`Height: ${height}cm`);
+    if (systolicBP && diastolicBP)
+      vitals.push(`BP: ${systolicBP}/${diastolicBP}`);
+    if (bloodOxygen) vitals.push(`SpO2: ${bloodOxygen}`);
+    if (heartRate) vitals.push(`Heart Rate: ${heartRate}bpm`);
+    if (respiratoryRate) vitals.push(`Respiratory Rate: ${respiratoryRate}`);
 
     const data = {
-      doctor_name: "Dr. John Doe",
-      doctor_email: "john.doe@clinic.com",
-      specialization: "Cardiologist",
-      clinic_name: "HealthCare Clinic",
-      clinic_address: "123 Main Street, NY",
-
-      patient_name: "Ramesh Kumar",
-      patient_age: "42",
-      patient_gender: "Male",
-
-      chief_complaints: "Chest pain, shortness of breath.",
-      diagnosis: "Suspected angina.",
-      vitals: "BP: 130/85, Pulse: 88, SpO2: 96%",
-      procedures: "ECG performed",
-
+      doctor_name,
+      doctor_email,
+      specialization,
+      clinic_name,
+      clinic_address,
+      patient_name,
+      patient_age,
+      patient_gender,
+      chief_complaints,
+      diagnosis,
+      vitals: vitals.join(", "),
+      procedures: procedureRows
+        .map((procedure) => procedure.procedureName || "")
+        .join(", "),
       invoice_items: `
-        <tr><td>Consultation</td><td>700</td></tr>
-        <tr><td>ECG</td><td>400</td></tr>
+        <tr><td>Consultation Fees</td><td>${consultationFees}</td></tr>
+        ${procedureRows
+          .map(
+            (procedure) =>
+              `<tr><td>${procedure.procedureName || ""}</td><td>${
+                procedure.amount || 0
+              }</td></tr>`
+          )
+          .join("\n")}
     `,
-      invoice_total: "1100"
+      invoice_total
     };
 
     let template = baseTemplate;

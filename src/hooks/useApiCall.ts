@@ -82,6 +82,11 @@ const useApiCall = <Response>({
             params
           });
           break;
+        case "PATCH":
+          await apiClient.patch(endpoint, payload, {
+            params
+          });
+          break;
         case "DELETE":
           await apiClient.delete(endpoint, {
             params

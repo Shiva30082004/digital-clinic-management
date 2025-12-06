@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from "react";
 import {
   ArrowLeft,
   Plus,
@@ -21,31 +21,50 @@ import {
   CheckCircle,
   CircleDashed,
   MoreVertical
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import useApiCall from '@/hooks/useApiCall';
+import useApiCall from "@/hooks/useApiCall";
+import Appointment from "@/types/Appointment";
 
-export function PatientProfile({ patient, onBack, onStartConsultation }) {
-  const { invokeRequest: fetchAppointmentsRequest, data: appointmentsData, isLoading: isLoadingAppointments } = useApiCall<any[]>();
+export function PatientProfile({ patientId, onBack, onStartConsultation }) {
+  const {
+    data: appointments = [],
+    isLoading: isLoadingAppointments,
+    refetch: refetchAppointments
+  } = useApiCall<Appointment[]>({
+    request: {
+      endpoint: "/api/appointments/byPatient",
+      method: "GET",
+      params: {
+        patientId
+      }
+    },
+    fetchOnMount: !!patientId
+  });
   const { invokeRequest: updateAppointmentRequest } = useApiCall();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState("overview");
   const [showNewAppointment, setShowNewAppointment] = useState(false);
-  const [appointments, setAppointments] = useState<any[]>([]);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [newAppointment, setNewAppointment] = useState({
     date: "",
@@ -62,44 +81,13 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
     bloodGroup: ""
   });
 
-  // Update appointments when data changes
-  useEffect(() => {
-    if (appointmentsData) {
-      setAppointments(appointmentsData);
-    }
-  }, [appointmentsData]);
-
-  // Fetch appointments for this patient
-  useEffect(() => {
-    if (patient?.id) {
-      fetchAppointments();
-    }
-  }, [patient?.id]);
-
-  const fetchAppointments = async () => {
-    try {
-      await fetchAppointmentsRequest({
-        endpoint: '/api/appointments/byPatient',
-        method: 'GET',
-        params: {
-          patientId: patient.id
-        }
-      });
-      
-      // The data will be set via the useApiCall hook's data state
-    } catch (error) {
-      console.error('Failed to fetch appointments:', error);
-      setAppointments([]);
-    }
-  };
-
   // Convert API status codes to display format
   const convertStatusToDisplay = (apiStatus: string) => {
     const statusMap: { [key: string]: string } = {
-      'BKD': 'Booked',
-      'ACT': 'Active',
-      'COM': 'Completed',
-      'CAN': 'Cancelled'
+      BKD: "Booked",
+      ACT: "Active",
+      COM: "Completed",
+      CAN: "Cancelled"
     };
     return statusMap[apiStatus] || apiStatus;
   };
@@ -107,44 +95,65 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
   // Convert display status to API format
   const convertStatusToApi = (displayStatus: string) => {
     const statusMap: { [key: string]: string } = {
-      'Booked': 'BKD',
-      'Active': 'ACT',
-      'Completed': 'COM',
-      'Cancelled': 'CAN'
+      Booked: "BKD",
+      Active: "ACT",
+      Completed: "COM",
+      Cancelled: "CAN"
     };
     return statusMap[displayStatus] || displayStatus;
   };
 
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'completed':
+      case "completed":
         return <CheckCircle className="h-4 w-4" />;
-      case 'active':
+      case "active":
         return <Activity className="h-4 w-4" />;
       default:
         return <CircleDashed className="h-4 w-4" />;
     }
   };
 
-  const handleUpdateStatus = async (appointmentId: number, newStatus: string) => {
+  const handleUpdateStatus = async (
+    appointmentId: number,
+    newStatus: string
+  ) => {
     try {
       await updateAppointmentRequest({
-        endpoint: '/api/appointments',
-        method: 'PUT',
+        endpoint: "/api/appointments",
+        method: "PUT",
         payload: {
           appointmentID: appointmentId,
           appointmentStatus: convertStatusToApi(newStatus)
         }
       });
-      console.log('Appointment status updated:', appointmentId, newStatus);
+      console.log("Appointment status updated:", appointmentId, newStatus);
       // Refresh appointments list
-      fetchAppointments();
+      refetchAppointments();
     } catch (error) {
-      console.error('Failed to update appointment status:', error);
+      console.error("Failed to update appointment status:", error);
     }
   };
-  
-  if (!patient) {
+
+  const { isLoading = false, data: patient = {} } = useApiCall({
+    request: {
+      endpoint: "/api/patient",
+      params: {
+        id: patientId
+      }
+    },
+    fetchOnMount: true
+  });
+
+  const patientName = useMemo(
+    () =>
+      `${(patient || {}).firstName || ""} ${
+        (patient || {}).lastName || ""
+      }`.trim(),
+    [patient]
+  );
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-slate-500">Loading patient information...</div>
@@ -584,111 +593,66 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
       </Card>
 
       {/* Tabs */}
-      <Tabs defaultValue="overview" className="space-y-4" onValueChange={setActiveTab}>
+      <Tabs
+        defaultValue="overview"
+        className="space-y-4"
+        onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="overview">Appointments</TabsTrigger>
           <TabsTrigger value="vitals">Vitals & Charts</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="border-slate-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">
-                  Total Visits
-                </CardTitle>
-                <Calendar className="h-4 w-4 text-blue-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-slate-900">24</div>
-                <p className="text-xs text-slate-500 mt-1">Last: 2 days ago</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-slate-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">
-                  Blood Pressure
-                </CardTitle>
-                <Activity className="h-4 w-4 text-red-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-slate-900">121/80</div>
-                <p className="text-xs text-green-600 mt-1">Normal range</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-slate-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">
-                  Heart Rate
-                </CardTitle>
-                <Heart className="h-4 w-4 text-pink-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-slate-900">72</div>
-                <p className="text-xs text-slate-500 mt-1">bpm</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-slate-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">
-                  Weight
-                </CardTitle>
-                <Weight className="h-4 w-4 text-purple-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-slate-900">73</div>
-                <p className="text-xs text-slate-500 mt-1">kg</p>
-              </CardContent>
-            </Card>
-          </div>
-
           {/* All Appointments */}
           <Card className="border-slate-200">
             <CardHeader>
               <CardTitle>All Appointments</CardTitle>
-              <CardDescription>Complete appointment history for this patient</CardDescription>
+              <CardDescription>
+                Complete appointment history for this patient
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoadingAppointments && appointments.length === 0 ? (
+              {isLoadingAppointments && (appointments || []).length === 0 ? (
                 <div className="flex justify-center items-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
-              ) : appointments.length === 0 ? (
+              ) : (appointments || []).length === 0 ? (
                 <div className="text-center py-8 text-slate-500">
                   <Calendar className="h-12 w-12 mx-auto mb-2 text-slate-300" />
                   <p>No appointments found for this patient</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {appointments.map((appointment) => {
+                  {(appointments || []).map((appointment) => {
                     const startTime = new Date(appointment.startTime);
                     const endTime = new Date(appointment.endTime);
                     const hours = startTime.getHours();
-                    const minutes = String(startTime.getMinutes()).padStart(2, '0');
+                    const minutes = String(startTime.getMinutes()).padStart(
+                      2,
+                      "0"
+                    );
                     const timeString = `${hours}:${minutes}`;
                     const endHours = endTime.getHours();
-                    const endMinutes = String(endTime.getMinutes()).padStart(2, '0');
-                    const dateString = startTime.toLocaleDateString('en-US', { 
-                      weekday: 'short', 
-                      month: 'short', 
-                      day: 'numeric', 
-                      year: 'numeric' 
+                    const endMinutes = String(endTime.getMinutes()).padStart(
+                      2,
+                      "0"
+                    );
+                    const dateString = startTime.toLocaleDateString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric"
                     });
-                    
+
                     return (
-                      <div 
-                        key={appointment.appointmentID} 
-                        className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:border-slate-300 hover:shadow-sm transition-all"
-                      >
+                      <div
+                        key={appointment.appointmentID}
+                        className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:border-slate-300 hover:shadow-sm transition-all">
                         <div className="flex items-center space-x-4 flex-1">
                           <div className="flex items-center justify-center w-16 h-16 bg-slate-100 rounded-lg">
                             <div className="text-center">
                               <div className="text-xs font-medium text-slate-600">
-                                {hours.toString().padStart(2, '0')}
+                                {hours.toString().padStart(2, "0")}
                               </div>
                               <div className="text-lg font-bold text-slate-900">
                                 {minutes}
@@ -696,30 +660,52 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
                             </div>
                           </div>
                           <div className="flex-1">
-                            <p className="font-semibold text-slate-900">{dateString}</p>
-                            <p className="text-sm text-slate-600">{timeString} - {endHours}:{endMinutes}</p>
+                            <p className="font-semibold text-slate-900">
+                              {dateString}
+                            </p>
+                            <p className="text-sm text-slate-600">
+                              {timeString} - {endHours}:{endMinutes}
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Badge variant="secondary" className={getStatusColor(convertStatusToDisplay(appointment.appointmentStatus))}>
-                            {getStatusIcon(convertStatusToDisplay(appointment.appointmentStatus))}
-                            <span className="ml-1 capitalize">{convertStatusToDisplay(appointment.appointmentStatus)}</span>
+                          <Badge
+                            variant="secondary"
+                            className={getStatusColor(
+                              convertStatusToDisplay(
+                                appointment.appointmentStatus
+                              )
+                            )}>
+                            {getStatusIcon(
+                              convertStatusToDisplay(
+                                appointment.appointmentStatus
+                              )
+                            )}
+                            <span className="ml-1 capitalize">
+                              {convertStatusToDisplay(
+                                appointment.appointmentStatus
+                              )}
+                            </span>
                           </Badge>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="outline"
-                            onClick={() => onStartConsultation(appointment)}
-                          >
+                            onClick={() => onStartConsultation(appointment)}>
                             <Eye className="mr-1 h-3 w-3" />
                             View
                           </Button>
                           <div className="relative">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               className="h-8 w-8"
-                              onClick={() => setOpenMenuId(openMenuId === appointment.appointmentID ? null : appointment.appointmentID)}
-                            >
+                              onClick={() =>
+                                setOpenMenuId(
+                                  openMenuId === appointment.appointmentID
+                                    ? null
+                                    : appointment.appointmentID
+                                )
+                              }>
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                             {openMenuId === appointment.appointmentID && (
@@ -730,45 +716,52 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
                                     onClick={() => {
                                       onStartConsultation(appointment);
                                       setOpenMenuId(null);
-                                    }}
-                                  >
+                                    }}>
                                     Start Consultation
                                   </button>
                                   <div className="border-t border-gray-100"></div>
                                   <button
                                     className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                                     onClick={() => {
-                                      handleUpdateStatus(appointment.appointmentID, 'Booked');
+                                      handleUpdateStatus(
+                                        appointment.appointmentID,
+                                        "Booked"
+                                      );
                                       setOpenMenuId(null);
-                                    }}
-                                  >
+                                    }}>
                                     Mark as Booked
                                   </button>
                                   <button
                                     className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                                     onClick={() => {
-                                      handleUpdateStatus(appointment.appointmentID, 'Active');
+                                      handleUpdateStatus(
+                                        appointment.appointmentID,
+                                        "Active"
+                                      );
                                       setOpenMenuId(null);
-                                    }}
-                                  >
+                                    }}>
                                     Mark as Active
                                   </button>
                                   <button
                                     className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                                     onClick={() => {
-                                      handleUpdateStatus(appointment.appointmentID, 'Completed');
+                                      handleUpdateStatus(
+                                        appointment.appointmentID,
+                                        "Completed"
+                                      );
                                       setOpenMenuId(null);
-                                    }}
-                                  >
+                                    }}>
                                     Mark as Completed
                                   </button>
                                   <button
                                     className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                                     onClick={() => {
-                                      handleUpdateStatus(appointment.appointmentID, 'Cancelled');
+                                      handleUpdateStatus(
+                                        appointment.appointmentID,
+                                        "Cancelled"
+                                      );
                                       setOpenMenuId(null);
-                                    }}
-                                  >
+                                    }}>
                                     Mark as Cancelled
                                   </button>
                                 </div>
