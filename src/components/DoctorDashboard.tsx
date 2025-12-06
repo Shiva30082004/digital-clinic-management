@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Calendar, 
   Clock, 
@@ -44,6 +44,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import useApiCall from '@/hooks/useApiCall';
 
 // Mock data
 const todaysAppointments = [
@@ -88,40 +89,185 @@ const getStatusIcon = (status: string) => {
 
 
 export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
+  const { invokeRequest: createAppointmentRequest } = useApiCall();
+  const { invokeRequest: fetchAppointmentsRequest, data: appointmentsData, isLoading: isLoadingAppointments } = useApiCall<any[]>();
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [appointments, setAppointments] = useState<any[]>([]);
   const [newAppointment, setNewAppointment] = useState({
     patientId: '',
     patientName: '',
     date: '',
     startTime: '',
     endTime: '',
-    status: 'Booked'
+    status: 'BKD' // API expects: BKD, ACT, COM, CAN
   });
+  const [appointmentError, setAppointmentError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleScheduleAppointment = () => {
-    // TODO: Call API to create appointment
-    console.log('Scheduling appointment:', newAppointment);
-    setIsNewAppointmentOpen(false);
-    // Reset form
-    setNewAppointment({
-      patientId: '',
-      patientName: '',
-      date: '',
-      startTime: '',
-      endTime: '',
-      status: 'Booked'
+  // Update appointments when data changes
+  useEffect(() => {
+    if (appointmentsData) {
+      setAppointments(appointmentsData);
+    }
+  }, [appointmentsData]);
+
+  // Helper function to format date as YYYY-MM-DD
+  const formatDateForApi = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Helper function to format date for display
+  const formatDateForDisplay = (date: Date): string => {
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'short', 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
     });
   };
 
-  const handleDeleteAppointment = (appointmentId: number) => {
-    // TODO: Call API to delete appointment
-    console.log('Deleting appointment:', appointmentId);
+  // Helper function to convert status to API format
+  const convertStatusToApi = (displayStatus: string): string => {
+    const statusMap: { [key: string]: string } = {
+      'Booked': 'BKD',
+      'Active': 'ACT',
+      'Completed': 'COM',
+      'Cancelled': 'CAN'
+    };
+    return statusMap[displayStatus] || 'BKD';
   };
 
-  const handleUpdateStatus = (appointmentId: number, newStatus: string) => {
-    // TODO: Call API to update appointment status
-    console.log('Updating appointment status:', appointmentId, newStatus);
+  // Helper function to convert API status to display format
+  const convertStatusToDisplay = (apiStatus: string): string => {
+    const statusMap: { [key: string]: string } = {
+      'BKD': 'Booked',
+      'ACT': 'Active',
+      'COM': 'Completed',
+      'CAN': 'Cancelled'
+    };
+    return statusMap[apiStatus] || 'Booked';
+  };
+
+  // Fetch appointments for selected date
+  const fetchAppointments = async (date: Date) => {
+    try {
+      const dateStr = formatDateForApi(date);
+      await fetchAppointmentsRequest({
+        endpoint: '/api/appointments/byDate',
+        method: 'GET',
+        params: {
+          startDate: dateStr,
+          endDate: dateStr
+        }
+      });
+      
+      // The data will be set via the useApiCall hook's data state
+    } catch (error) {
+      console.error('Failed to fetch appointments:', error);
+      setAppointments([]);
+    }
+  };
+
+  // Fetch appointments on mount and when date changes
+  useEffect(() => {
+    fetchAppointments(selectedDate);
+  }, [selectedDate]);
+
+  // Navigate to previous day
+  const handlePreviousDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() - 1);
+    setSelectedDate(newDate);
+  };
+
+  // Navigate to next day
+  const handleNextDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + 1);
+    setSelectedDate(newDate);
+  };
+
+  const handleScheduleAppointment = async () => {
+    setIsSubmitting(true);
+    setAppointmentError('');
+
+    try {
+      // Combine date and time into ISO datetime format
+      const startDateTime = `${newAppointment.date}T${newAppointment.startTime}:00`;
+      const endDateTime = `${newAppointment.date}T${newAppointment.endTime}:00`;
+
+      // Call API to create appointment
+      await createAppointmentRequest({
+        endpoint: '/api/appointments',
+        method: 'POST',
+        payload: {
+          patientID: newAppointment.patientId,
+          appointmentStatus: convertStatusToApi(newAppointment.status),
+          startTime: startDateTime,
+          endTime: endDateTime
+        }
+      });
+
+      console.log('Appointment created successfully:', newAppointment);
+      
+      // Close dialog and reset form
+      setIsNewAppointmentOpen(false);
+      setNewAppointment({
+        patientId: '',
+        patientName: '',
+        date: '',
+        startTime: '',
+        endTime: '',
+        status: 'BKD'
+      });
+
+      // Refresh appointments list
+      fetchAppointments(selectedDate);
+
+    } catch (error) {
+      console.error('Failed to create appointment:', error);
+      setAppointmentError('Failed to create appointment. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteAppointment = async (appointmentId: number) => {
+    try {
+      await createAppointmentRequest({
+        endpoint: `/api/appointments`,
+        method: 'DELETE',
+        params: { id: appointmentId }
+      });
+      console.log('Appointment deleted successfully:', appointmentId);
+      // Refresh appointments list
+      fetchAppointments(selectedDate);
+    } catch (error) {
+      console.error('Failed to delete appointment:', error);
+    }
+  };
+
+  const handleUpdateStatus = async (appointmentId: number, newStatus: string) => {
+    try {
+      await createAppointmentRequest({
+        endpoint: `/api/appointments`,
+        method: 'PUT',
+        params: { id: appointmentId },
+        payload: {
+          appointmentStatus: convertStatusToApi(newStatus)
+        }
+      });
+      console.log('Appointment status updated:', appointmentId, newStatus);
+      // Refresh appointments list
+      fetchAppointments(selectedDate);
+    } catch (error) {
+      console.error('Failed to update appointment status:', error);
+    }
   };
 
   return (
@@ -130,7 +276,7 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 mb-1">Good Morning, Doctor</h1>
-          <p className="text-slate-600">You have 5 appointments today</p>
+          <p className="text-slate-600">You have {appointments.length} appointment{appointments.length !== 1 ? 's' : ''} for {formatDateForDisplay(selectedDate)}</p>
         </div>
         <Button 
           className="bg-blue-600 hover:bg-blue-700"
@@ -141,139 +287,167 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
         </Button>
       </div>
 
-      {/* Today's Appointments */}
+      {/* Appointments by Date */}
       <Card className="border-slate-200">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Today's Appointments</CardTitle>
-              <CardDescription>Manage your schedule for today</CardDescription>
+              <CardTitle>Appointments</CardTitle>
+              <CardDescription>Manage your schedule for the selected date</CardDescription>
             </div>
             <div className="flex items-center space-x-2">
-              <Button variant="outline" size="icon" className="h-8 w-8">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-8 w-8"
+                onClick={handlePreviousDay}
+              >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <div className="text-sm font-medium text-slate-700 min-w-[140px] text-center">
-                Wed, Sep 17, 2025
+                {formatDateForDisplay(selectedDate)}
               </div>
-              <Button variant="outline" size="icon" className="h-8 w-8">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-8 w-8"
+                onClick={handleNextDay}
+              >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {todaysAppointments.map((appointment) => (
-              <div 
-                key={appointment.id} 
-                className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:border-slate-300 hover:shadow-sm transition-all"
-              >
-                <div className="flex items-center space-x-4 flex-1">
-                  <div className="flex items-center justify-center w-16 h-16 bg-slate-100 rounded-lg">
-                    <div className="text-center">
-                      <div className="text-xs font-medium text-slate-600">
-                        {appointment.time.split(':')[0]}
+          {isLoadingAppointments ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : appointments.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              <Calendar className="h-12 w-12 mx-auto mb-2 text-slate-300" />
+              <p>No appointments scheduled for this date</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {appointments.map((appointment) => {
+                const startTime = new Date(appointment.startTime);
+                const hours = startTime.getHours();
+                const minutes = String(startTime.getMinutes()).padStart(2, '0');
+                const timeString = `${hours}:${minutes}`;
+                
+                return (
+                  <div 
+                    key={appointment.appointmentID} 
+                    className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:border-slate-300 hover:shadow-sm transition-all"
+                  >
+                    <div className="flex items-center space-x-4 flex-1">
+                      <div className="flex items-center justify-center w-16 h-16 bg-slate-100 rounded-lg">
+                        <div className="text-center">
+                          <div className="text-xs font-medium text-slate-600">
+                            {hours.toString().padStart(2, '0')}
+                          </div>
+                          <div className="text-lg font-bold text-slate-900">
+                            {minutes}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-lg font-bold text-slate-900">
-                        {appointment.time.split(':')[1]}
+                      <div className="flex-1">
+                        <p className="font-semibold text-slate-900">Patient ID: {appointment.patientID}</p>
+                        <p className="text-sm text-slate-600">{timeString} - {new Date(appointment.endTime).getHours()}:{String(new Date(appointment.endTime).getMinutes()).padStart(2, '0')}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="secondary" className={getStatusColor(convertStatusToDisplay(appointment.appointmentStatus))}>
+                        {getStatusIcon(convertStatusToDisplay(appointment.appointmentStatus))}
+                        <span className="ml-1 capitalize">{convertStatusToDisplay(appointment.appointmentStatus)}</span>
+                      </Badge>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => onStartConsultation(appointment)}
+                      >
+                        <Eye className="mr-1 h-3 w-3" />
+                        View
+                      </Button>
+                      <div className="relative">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8"
+                          onClick={() => setOpenMenuId(openMenuId === appointment.appointmentID ? null : appointment.appointmentID)}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                        {openMenuId === appointment.appointmentID && (
+                          <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                            <div className="py-1" role="menu">
+                              <button
+                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                onClick={() => {
+                                  onStartConsultation(appointment);
+                                  setOpenMenuId(null);
+                                }}
+                              >
+                                Start Consultation
+                              </button>
+                              <div className="border-t border-gray-100"></div>
+                              <button
+                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                onClick={() => {
+                                  handleUpdateStatus(appointment.appointmentID, 'Booked');
+                                  setOpenMenuId(null);
+                                }}
+                              >
+                                Mark as Booked
+                              </button>
+                              <button
+                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                onClick={() => {
+                                  handleUpdateStatus(appointment.appointmentID, 'Active');
+                                  setOpenMenuId(null);
+                                }}
+                              >
+                                Mark as Active
+                              </button>
+                              <button
+                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                onClick={() => {
+                                  handleUpdateStatus(appointment.appointmentID, 'Completed');
+                                  setOpenMenuId(null);
+                                }}
+                              >
+                                Mark as Completed
+                              </button>
+                              <button
+                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                onClick={() => {
+                                  handleUpdateStatus(appointment.appointmentID, 'Cancelled');
+                                  setOpenMenuId(null);
+                                }}
+                              >
+                                Mark as Cancelled
+                              </button>
+                              <div className="border-t border-gray-100"></div>
+                              <button
+                                className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                                onClick={() => {
+                                  handleDeleteAppointment(appointment.appointmentID);
+                                  setOpenMenuId(null);
+                                }}
+                              >
+                                Delete Appointment
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-slate-900">{appointment.patient}</p>
-                    <p className="text-sm text-slate-600">{appointment.type}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="secondary" className={getStatusColor(appointment.status)}>
-                    {getStatusIcon(appointment.status)}
-                    <span className="ml-1 capitalize">{appointment.status}</span>
-                  </Badge>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => onStartConsultation(appointment)}
-                  >
-                    <Eye className="mr-1 h-3 w-3" />
-                    View
-                  </Button>
-                  <div className="relative">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8"
-                      onClick={() => setOpenMenuId(openMenuId === appointment.id ? null : appointment.id)}
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                    {openMenuId === appointment.id && (
-                      <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
-                        <div className="py-1" role="menu">
-                          <button
-                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            onClick={() => {
-                              onStartConsultation(appointment);
-                              setOpenMenuId(null);
-                            }}
-                          >
-                            Start Consultation
-                          </button>
-                          <div className="border-t border-gray-100"></div>
-                          <button
-                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            onClick={() => {
-                              handleUpdateStatus(appointment.id, 'Booked');
-                              setOpenMenuId(null);
-                            }}
-                          >
-                            Mark as Booked
-                          </button>
-                          <button
-                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            onClick={() => {
-                              handleUpdateStatus(appointment.id, 'Active');
-                              setOpenMenuId(null);
-                            }}
-                          >
-                            Mark as Active
-                          </button>
-                          <button
-                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            onClick={() => {
-                              handleUpdateStatus(appointment.id, 'Completed');
-                              setOpenMenuId(null);
-                            }}
-                          >
-                            Mark as Completed
-                          </button>
-                          <button
-                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            onClick={() => {
-                              handleUpdateStatus(appointment.id, 'Cancelled');
-                              setOpenMenuId(null);
-                            }}
-                          >
-                            Mark as Cancelled
-                          </button>
-                          <div className="border-t border-gray-100"></div>
-                          <button
-                            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                            onClick={() => {
-                              handleDeleteAppointment(appointment.id);
-                              setOpenMenuId(null);
-                            }}
-                          >
-                            Delete Appointment
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -405,20 +579,27 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
                 </SelectContent>
               </Select>
             </div>
+
+            {appointmentError && (
+              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
+                {appointmentError}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setIsNewAppointmentOpen(false)}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
             <Button
               onClick={handleScheduleAppointment}
               className="bg-blue-600 hover:bg-blue-700"
-              disabled={!newAppointment.patientId || !newAppointment.date || !newAppointment.startTime || !newAppointment.endTime}
+              disabled={!newAppointment.patientId || !newAppointment.date || !newAppointment.startTime || !newAppointment.endTime || isSubmitting}
             >
-              Schedule Appointment
+              {isSubmitting ? 'Creating...' : 'Schedule Appointment'}
             </Button>
           </DialogFooter>
         </DialogContent>
