@@ -19,10 +19,6 @@ export async function proxy(req: NextRequest) {
 
   const auth = getFirebaseAdminAuth();
 
-  const conn = await getDbConnection();
-
-  if (!conn) return Response.json({}, { status: 500 });
-
   const decodedToken = await auth.verifyIdToken(token);
 
   const email = decodedToken.email;
@@ -34,11 +30,17 @@ export async function proxy(req: NextRequest) {
     );
   }
 
+  const conn = await getDbConnection();
+
+  if (!conn) return Response.json({}, { status: 500 });
+
   const query =
     "SELECT doctorId, clinicId, role FROM Doctors WHERE emailAddress = ?;";
   const values = [email];
 
   const [rows] = await conn.execute<Doctor[]>(query, values);
+
+  conn.release();
 
   if (Array.isArray(rows) && rows.length > 0) {
     const [user = {}] = rows || [];
