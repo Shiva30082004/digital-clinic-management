@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Calendar, 
   Clock, 
@@ -92,7 +92,7 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [appointments, setAppointments] = useState<any[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
-  const [lastFetchedDate, setLastFetchedDate] = useState<string>('');
+  const lastFetchedDateRef = useRef<string>(''); // Use ref instead of state for persistence
   const [newAppointment, setNewAppointment] = useState({
     patientId: '',
     date: '',
@@ -170,7 +170,7 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
       const dateStr = formatDateForApi(date);
       
       // Skip fetch if we already have data for this date (unless forced)
-      if (!forceRefresh && dateStr === lastFetchedDate && appointments.length > 0) {
+      if (!forceRefresh && dateStr === lastFetchedDateRef.current && appointments.length > 0) {
         console.log('Skipping fetch - data already loaded for', dateStr);
         return;
       }
@@ -184,7 +184,7 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
         }
       });
       
-      setLastFetchedDate(dateStr);
+      lastFetchedDateRef.current = dateStr; // Update ref instead of state
       
       // The data will be set via the useApiCall hook's data state
     } catch (error) {
