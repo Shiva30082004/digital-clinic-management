@@ -47,18 +47,13 @@ import {
 import useApiCall from '@/hooks/useApiCall';
 
 // Mock data
+// Mock data (can be removed once all features are integrated)
 const todaysAppointments = [
   { id: 1, time: '09:00', patient: "Jahnavi J", status: 'Booked', type: 'General Checkup' },
   { id: 2, time: '09:30', patient: "Arjun S", status: 'Active', type: 'Follow-up' },
   { id: 3, time: '10:00', patient: "Grace L", status: 'Completed', type: 'Consultation' },
   { id: 4, time: '10:30', patient: "Shiv B", status: 'Booked', type: 'Blood Test' },
   { id: 5, time: '11:00', patient: "David D", status: 'Booked', type: 'Physical Exam' },
-];
-
-const recentPatients = [
-  { id: 1, name: 'Jahnavi J', lastVisit: '2 days ago' },
-  { id: 2, name: 'Arjun S', lastVisit: '1 week ago' },
-  { id: 3, name: 'Grace L', lastVisit: '3 days ago' },
 ];
 
 const getStatusColor = (status: string) => {
@@ -91,17 +86,17 @@ const getStatusIcon = (status: string) => {
 export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
   const { invokeRequest: createAppointmentRequest } = useApiCall();
   const { invokeRequest: fetchAppointmentsRequest, data: appointmentsData, isLoading: isLoadingAppointments } = useApiCall<any[]>();
+  const { invokeRequest: fetchPatientsRequest, data: patientsData, isLoading: isLoadingPatients } = useApiCall<any[]>();
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [patients, setPatients] = useState<any[]>([]);
   const [newAppointment, setNewAppointment] = useState({
     patientId: '',
-    patientName: '',
     date: '',
     startTime: '',
-    endTime: '',
-    status: 'BKD' // API expects: BKD, ACT, COM, CAN
+    endTime: ''
   });
   const [appointmentError, setAppointmentError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -112,6 +107,21 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
       setAppointments(appointmentsData);
     }
   }, [appointmentsData]);
+
+  // Update patients when data changes
+  useEffect(() => {
+    if (patientsData) {
+      setPatients(patientsData);
+    }
+  }, [patientsData]);
+
+  // Fetch patients on mount
+  useEffect(() => {
+    fetchPatientsRequest({
+      endpoint: '/api/patient',
+      method: 'GET'
+    });
+  }, []);
 
   // Helper function to format date as YYYY-MM-DD
   const formatDateForApi = (date: Date): string => {
@@ -212,7 +222,7 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
         method: 'POST',
         payload: {
           patientID: newAppointment.patientId,
-          appointmentStatus: convertStatusToApi(newAppointment.status),
+          appointmentStatus: 'BKD', // Always "Booked" for new appointments
           startTime: startDateTime,
           endTime: endDateTime
         }
@@ -224,11 +234,9 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
       setIsNewAppointmentOpen(false);
       setNewAppointment({
         patientId: '',
-        patientName: '',
         date: '',
         startTime: '',
-        endTime: '',
-        status: 'BKD'
+        endTime: ''
       });
 
       // Refresh appointments list
@@ -515,23 +523,27 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
               <Select
                 value={newAppointment.patientId}
                 onValueChange={(value) => {
-                  const patient = recentPatients.find(p => p.id.toString() === value);
                   setNewAppointment({
                     ...newAppointment,
-                    patientId: value,
-                    patientName: patient?.name || ''
+                    patientId: value
                   });
                 }}
               >
                 <SelectTrigger id="patient">
-                  <SelectValue placeholder="Select a patient" />
+                  <SelectValue placeholder={isLoadingPatients ? "Loading patients..." : "Select a patient"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {recentPatients.map((patient) => (
-                    <SelectItem key={patient.id} value={patient.id.toString()}>
-                      {patient.name}
-                    </SelectItem>
-                  ))}
+                  {isLoadingPatients ? (
+                    <SelectItem value="loading" disabled>Loading patients...</SelectItem>
+                  ) : patients.length === 0 ? (
+                    <SelectItem value="empty" disabled>No patients found</SelectItem>
+                  ) : (
+                    patients.map((patient) => (
+                      <SelectItem key={patient.patientId} value={patient.patientId.toString()}>
+                        {patient.firstName} {patient.lastName} {patient.emailAddress ? `(${patient.emailAddress})` : ''}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
               <p className="text-xs text-slate-500">
@@ -568,24 +580,6 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
                   onChange={(e) => setNewAppointment({ ...newAppointment, endTime: e.target.value })}
                 />
               </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={newAppointment.status}
-                onValueChange={(value) => setNewAppointment({ ...newAppointment, status: value })}
-              >
-                <SelectTrigger id="status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Booked">Booked</SelectItem>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Completed">Completed</SelectItem>
-                  <SelectItem value="Cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             {appointmentError && (
