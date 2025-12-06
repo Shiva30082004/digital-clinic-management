@@ -18,7 +18,7 @@ export default async function handler(
     if (!conn) return res.status(500).end();
 
     const doctorQuery =
-      "SELECT firstName, lastName, role, emailAddress, specialization, consultationFees FROM Doctors WHERE doctorId = ?;";
+      "SELECT doctorId, clinicId, firstName, lastName, role, emailAddress, specialization, consultationFees FROM Doctors WHERE doctorId = ?;";
     const doctorValues = [doctorId];
 
     const clinicQuery =

@@ -22,29 +22,20 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
+  DialogFooter
 } from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+  SelectValue
 } from "@/components/ui/select";
-
-// Mock patient data
-const patients = [
-  { id: 1, name: "Jahnavi J", age: "XX", status: "active" },
-  { id: 2, name: "Arjun S", age: "XX", status: "active" },
-  { id: 3, name: "Grace L", age: "XX", status: "active" },
-  { id: 4, name: "Shiv B", age: "XX", status: "inactive" },
-  { id: 5, name: "David D", age: "XX", status: "active" },
-  { id: 6, name: "Lisa A", age: "XX", status: "active" }
-];
+import useApiCall from "@/hooks/useApiCall";
+import { debounce } from "lodash";
 
 export function PatientList({ onPatientSelect }) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
   const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
   const [newPatient, setNewPatient] = useState({
     firstName: "",
@@ -56,9 +47,19 @@ export function PatientList({ onPatientSelect }) {
     email: ""
   });
 
+  const { data: patients = [] } = useApiCall({
+    request: {
+      endpoint: "/api/patient",
+      params: {
+        search: searchTerm
+      }
+    },
+    fetchOnMount: true
+  });
+
   const handleAddPatient = () => {
     // TODO: Call API to add new patient
-    console.log('Adding new patient:', newPatient);
+    console.log("Adding new patient:", newPatient);
     setIsAddPatientOpen(false);
     // Reset form
     setNewPatient({
@@ -72,19 +73,19 @@ export function PatientList({ onPatientSelect }) {
     });
   };
 
-  const filteredPatients = patients.filter((patient) =>
-    patient.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 mb-1">Patients</h1>
-          <p className="text-slate-600">{patients.length} total patients</p>
+          <p className="text-slate-600">
+            {(patients || []).length} total patients
+          </p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setIsAddPatientOpen(true)}>
+        <Button
+          className="bg-blue-600 hover:bg-blue-700"
+          onClick={() => setIsAddPatientOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Add New Patient
         </Button>
@@ -98,8 +99,8 @@ export function PatientList({ onPatientSelect }) {
             <Input
               className="pl-9"
               placeholder="Search patients by name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              // value={searchTerm}
+              onChange={debounce((e) => setSearchTerm(e.target.value), 300)}
             />
           </div>
         </CardContent>
@@ -107,11 +108,11 @@ export function PatientList({ onPatientSelect }) {
 
       {/* Patient Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredPatients.map((patient) => (
+        {(patients || []).map((patient) => (
           <Card
             key={patient.id}
             className="border-slate-200 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer group"
-            onClick={() => onPatientSelect(patient)}>
+            onClick={() => onPatientSelect(patient.patientId || "")}>
             <CardContent className="p-6">
               <div className="space-y-4">
                 {/* Patient Header */}
@@ -119,12 +120,12 @@ export function PatientList({ onPatientSelect }) {
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-12 w-12">
                       <AvatarFallback className="bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700 font-semibold">
-                        {patient.name.charAt(0)}
+                        {(patient.firstName || "").charAt(0)}
                       </AvatarFallback>
                     </Avatar>
                     <div>
                       <h3 className="font-semibold text-slate-900">
-                        {patient.name}
+                        {patient.firstName || ""} {patient.lastName || ""}
                       </h3>
                       <p className="text-sm text-slate-500">
                         Age: {patient.age}
@@ -137,19 +138,15 @@ export function PatientList({ onPatientSelect }) {
                 {/* Patient Details */}
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center justify-between text-slate-600">
-                    <span>Blood Group:</span>
+                    <span>Gender:</span>
                     <Badge variant="outline" className="font-mono">
-                      A+
+                      {patient.gender || "M"}
                     </Badge>
-                  </div>
-                  <div className="flex items-center text-slate-600">
-                    <Phone className="h-3.5 w-3.5 mr-2" />
-                    <span className="text-xs">+1 (555) 123-4567</span>
                   </div>
                   <div className="flex items-center text-slate-600">
                     <Mail className="h-3.5 w-3.5 mr-2" />
                     <span className="text-xs truncate">
-                      {patient.name.toLowerCase().replace(" ", ".")}@email.com
+                      {patient.emailAddress || ""}
                     </span>
                   </div>
                 </div>
@@ -162,7 +159,7 @@ export function PatientList({ onPatientSelect }) {
                     className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onPatientSelect(patient);
+                      onPatientSelect(patient.patientId);
                     }}>
                     View Profile
                   </Button>
@@ -184,7 +181,7 @@ export function PatientList({ onPatientSelect }) {
       </div>
 
       {/* No Results */}
-      {filteredPatients.length === 0 && (
+      {(patients || []).length === 0 && (
         <Card className="border-slate-200">
           <CardContent className="py-12 text-center">
             <div className="w-16 h-16 bg-slate-100 rounded-full mx-auto mb-4 flex items-center justify-center">
@@ -213,7 +210,8 @@ export function PatientList({ onPatientSelect }) {
           <DialogHeader>
             <DialogTitle>Add New Patient</DialogTitle>
             <DialogDescription>
-              Enter the patient's information below. All fields marked with * are required.
+              Enter the patient's information below. All fields marked with *
+              are required.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -224,7 +222,9 @@ export function PatientList({ onPatientSelect }) {
                 <Input
                   id="firstName"
                   value={newPatient.firstName}
-                  onChange={(e) => setNewPatient({ ...newPatient, firstName: e.target.value })}
+                  onChange={(e) =>
+                    setNewPatient({ ...newPatient, firstName: e.target.value })
+                  }
                   placeholder="John"
                   required
                 />
@@ -234,7 +234,9 @@ export function PatientList({ onPatientSelect }) {
                 <Input
                   id="lastName"
                   value={newPatient.lastName}
-                  onChange={(e) => setNewPatient({ ...newPatient, lastName: e.target.value })}
+                  onChange={(e) =>
+                    setNewPatient({ ...newPatient, lastName: e.target.value })
+                  }
                   placeholder="Doe"
                   required
                 />
@@ -249,7 +251,12 @@ export function PatientList({ onPatientSelect }) {
                   id="dateOfBirth"
                   type="date"
                   value={newPatient.dateOfBirth}
-                  onChange={(e) => setNewPatient({ ...newPatient, dateOfBirth: e.target.value })}
+                  onChange={(e) =>
+                    setNewPatient({
+                      ...newPatient,
+                      dateOfBirth: e.target.value
+                    })
+                  }
                   required
                 />
               </div>
@@ -257,8 +264,9 @@ export function PatientList({ onPatientSelect }) {
                 <Label htmlFor="gender">Gender *</Label>
                 <Select
                   value={newPatient.gender}
-                  onValueChange={(value) => setNewPatient({ ...newPatient, gender: value })}
-                >
+                  onValueChange={(value) =>
+                    setNewPatient({ ...newPatient, gender: value })
+                  }>
                   <SelectTrigger>
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
@@ -276,8 +284,9 @@ export function PatientList({ onPatientSelect }) {
               <Label htmlFor="bloodGroup">Blood Group</Label>
               <Select
                 value={newPatient.bloodGroup}
-                onValueChange={(value) => setNewPatient({ ...newPatient, bloodGroup: value })}
-              >
+                onValueChange={(value) =>
+                  setNewPatient({ ...newPatient, bloodGroup: value })
+                }>
                 <SelectTrigger>
                   <SelectValue placeholder="Select blood group" />
                 </SelectTrigger>
@@ -302,7 +311,12 @@ export function PatientList({ onPatientSelect }) {
                   id="phoneNumber"
                   type="tel"
                   value={newPatient.phoneNumber}
-                  onChange={(e) => setNewPatient({ ...newPatient, phoneNumber: e.target.value })}
+                  onChange={(e) =>
+                    setNewPatient({
+                      ...newPatient,
+                      phoneNumber: e.target.value
+                    })
+                  }
                   placeholder="+1 (555) 123-4567"
                   required
                 />
@@ -313,17 +327,23 @@ export function PatientList({ onPatientSelect }) {
                   id="email"
                   type="email"
                   value={newPatient.email}
-                  onChange={(e) => setNewPatient({ ...newPatient, email: e.target.value })}
+                  onChange={(e) =>
+                    setNewPatient({ ...newPatient, email: e.target.value })
+                  }
                   placeholder="john.doe@email.com"
                 />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddPatientOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddPatientOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddPatient} className="bg-blue-600 hover:bg-blue-700">
+            <Button
+              onClick={handleAddPatient}
+              className="bg-blue-600 hover:bg-blue-700">
               Add Patient
             </Button>
           </DialogFooter>
