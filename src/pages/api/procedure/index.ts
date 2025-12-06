@@ -16,7 +16,6 @@ export default async function handler(
 
   try {
     const search = (req.query.search as string) || "";
-    const limit = Number(req.query.limit) || 10;
 
     const query = `
       SELECT 
@@ -24,18 +23,22 @@ export default async function handler(
         ProcedureName AS procedureName,
         Amount AS amount
       FROM Procedures
-      WHERE ProcedureName LIKE CONCAT('%', ?, '%')
+      WHERE LOWER(ProcedureName) LIKE ?
       ORDER BY ProcedureName
-      LIMIT ?
+      LIMIT 10
     `;
 
-    const [rows] = await conn.execute<Procedure[]>(query, [search, limit]);
+    const [rows] = await conn.execute<Procedure[]>(query, [
+      `%${search.toLowerCase()}%`
+    ]);
     conn.release();
 
     return res.status(200).json({ data: rows });
   } catch (err) {
     console.error("GET procedures error:", err);
-    try { conn.release(); } catch {}
+    try {
+      conn.release();
+    } catch {}
     return res.status(500).json({ error: "Internal server error" });
   }
 }
