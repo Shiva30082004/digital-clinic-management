@@ -83,7 +83,7 @@ const getStatusIcon = (status: string) => {
 };
 
 
-export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
+export function DoctorDashboard({ onPatientSelect, onStartConsultation, doctorInfo }) {
   const { invokeRequest: createAppointmentRequest } = useApiCall();
   const { invokeRequest: fetchAppointmentsRequest, data: appointmentsData, isLoading: isLoadingAppointments } = useApiCall<any[]>();
   const { invokeRequest: fetchPatientsRequest, data: patientsData, isLoading: isLoadingPatients } = useApiCall<any[]>();
@@ -101,6 +101,14 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
   });
   const [appointmentError, setAppointmentError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check if appointment belongs to current doctor
+  const isOwnAppointment = (appointment: any) => {
+    return appointment.doctorID === doctorInfo?.doctorId;
+  };
+
+  // Check if user is admin
+  const isAdmin = doctorInfo?.role === 'admin';
 
   // Update appointments when data changes
   useEffect(() => {
@@ -365,6 +373,9 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
                   ? `${appointment.patientFirstName} ${appointment.patientLastName}`
                   : `Patient ID: ${appointment.patientID}`;
                 
+                // Check if this appointment can be viewed/edited by current doctor
+                const canViewAppointment = !isAdmin || isOwnAppointment(appointment);
+                
                 return (
                   <div 
                     key={appointment.appointmentID} 
@@ -395,6 +406,8 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
                         size="sm" 
                         variant="outline"
                         onClick={() => onStartConsultation(appointment)}
+                        disabled={!canViewAppointment}
+                        className={!canViewAppointment ? 'opacity-50 cursor-not-allowed' : ''}
                       >
                         <Eye className="mr-1 h-3 w-3" />
                         View
@@ -405,10 +418,11 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
                           size="icon" 
                           className="h-8 w-8"
                           onClick={() => setOpenMenuId(openMenuId === appointment.appointmentID ? null : appointment.appointmentID)}
+                          disabled={!canViewAppointment}
                         >
                           <MoreVertical className="h-4 w-4" />
                         </Button>
-                        {openMenuId === appointment.appointmentID && (
+                        {openMenuId === appointment.appointmentID && canViewAppointment && (
                           <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
                             <div className="py-1" role="menu">
                               <button
