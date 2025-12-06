@@ -244,9 +244,22 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
       // Small delay to ensure database write completes
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Always refresh the current date view instead of switching dates
-      setLastFetchedDate(''); // Clear cache to force refetch
-      await fetchAppointments(selectedDate);
+      // Force refetch by clearing cache first
+      setLastFetchedDate(''); // Clear cache
+      
+      // Force fetch by bypassing cache check
+      const dateStr = formatDateForApi(selectedDate);
+      await fetchAppointmentsRequest({
+        endpoint: '/api/appointments/byDate',
+        method: 'GET',
+        params: {
+          startDate: dateStr,
+          endDate: dateStr
+        }
+      });
+      
+      // Update cache after successful fetch
+      setLastFetchedDate(dateStr);
       
       // Close dialog and reset form after successful creation and refresh
       setIsNewAppointmentOpen(false);
