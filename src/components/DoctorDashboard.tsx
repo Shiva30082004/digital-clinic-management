@@ -335,6 +335,9 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
                 const hours = startTime.getHours();
                 const minutes = String(startTime.getMinutes()).padStart(2, '0');
                 const timeString = `${hours}:${minutes}`;
+                const patientName = appointment.patientFirstName && appointment.patientLastName 
+                  ? `${appointment.patientFirstName} ${appointment.patientLastName}`
+                  : `Patient ID: ${appointment.patientID}`;
                 
                 return (
                   <div 
@@ -353,7 +356,7 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
                         </div>
                       </div>
                       <div className="flex-1">
-                        <p className="font-semibold text-slate-900">Patient ID: {appointment.patientID}</p>
+                        <p className="font-semibold text-slate-900">{patientName}</p>
                         <p className="text-sm text-slate-600">{timeString} - {new Date(appointment.endTime).getHours()}:{String(new Date(appointment.endTime).getMinutes()).padStart(2, '0')}</p>
                       </div>
                     </div>

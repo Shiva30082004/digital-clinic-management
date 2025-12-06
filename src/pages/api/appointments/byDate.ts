@@ -36,19 +36,22 @@ export default async function handler(
   }
 
   try {
-    // Build query with optional status filter
+    // Build query with optional status filter - JOIN with Patient table for names
     let query = `
       SELECT 
-        AppointmentID as appointmentID,
-        AppointmentStatus as appointmentStatus,
-        StartTime as startTime,
-        EndTime as endTime,
-        PatientID as patientID,
-        DoctorID as doctorID
-      FROM Appointments 
-      WHERE DoctorID = ?
-        AND DATE(StartTime) >= ?
-        AND DATE(StartTime) <= ?
+        a.AppointmentID as appointmentID,
+        a.AppointmentStatus as appointmentStatus,
+        a.StartTime as startTime,
+        a.EndTime as endTime,
+        a.PatientID as patientID,
+        a.DoctorID as doctorID,
+        p.FirstName as patientFirstName,
+        p.LastName as patientLastName
+      FROM Appointments a
+      LEFT JOIN Patient p ON a.PatientID = p.PatientID
+      WHERE a.DoctorID = ?
+        AND DATE(a.StartTime) >= ?
+        AND DATE(a.StartTime) <= ?
     `;
     
     const values: any[] = [doctorID, startDate, endDate];
@@ -61,11 +64,11 @@ export default async function handler(
           message: "Invalid status. Must be one of: BKD, ACT, COM, CAN" 
         });
       }
-      query += " AND AppointmentStatus = ?";
+      query += " AND a.AppointmentStatus = ?";
       values.push(status);
     }
 
-    query += " ORDER BY StartTime ASC";
+    query += " ORDER BY a.StartTime ASC";
 
     const [rows] = await conn.execute<Appointment[]>(query, values);
 
