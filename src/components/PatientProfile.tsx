@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Plus,
@@ -17,7 +17,10 @@ import {
   Clock,
   X,
   Edit,
-  Save
+  Save,
+  CheckCircle,
+  CircleDashed,
+  MoreVertical
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,23 +31,22 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-
-const appointmentHistory = [
-  { id: 1, date: '2025-06-15', time: '10:00 AM', type: 'General Checkup', status: 'Completed' },
-  { id: 2, date: '2025-05-15', time: '2:30 PM', type: 'Follow-up', status: 'Completed' },
-  { id: 3, date: '2025-04-10', time: '11:15 AM', type: 'Blood Test', status: 'Completed' },
-  { id: 4, date: '2025-06-20', time: '9:00 AM', type: 'Consultation', status: 'Booked' }
-];
-
-const mockDocuments = [
-  { id: 1, name: 'Prescription - June 2025', type: 'PDF', date: '2025-06-15' },
-  { id: 2, name: 'Lab Report - Blood Test', type: 'PDF', date: '2025-04-10' },
-  { id: 3, name: 'Medical Certificate', type: 'PDF', date: '2025-03-22' }
-];
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import useApiCall from '@/hooks/useApiCall';
 
 export function PatientProfile({ patient, onBack, onStartConsultation }) {
+  const { invokeRequest: fetchAppointmentsRequest, data: appointmentsData, isLoading: isLoadingAppointments } = useApiCall<any[]>();
+  const { invokeRequest: updateAppointmentRequest } = useApiCall();
   const [activeTab, setActiveTab] = useState('overview');
   const [showNewAppointment, setShowNewAppointment] = useState(false);
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [newAppointment, setNewAppointment] = useState({
     date: '',
     startTime: '',
@@ -59,6 +61,88 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
     dateOfBirth: '',
     bloodGroup: ''
   });
+
+  // Update appointments when data changes
+  useEffect(() => {
+    if (appointmentsData) {
+      setAppointments(appointmentsData);
+    }
+  }, [appointmentsData]);
+
+  // Fetch appointments for this patient
+  useEffect(() => {
+    if (patient?.id) {
+      fetchAppointments();
+    }
+  }, [patient?.id]);
+
+  const fetchAppointments = async () => {
+    try {
+      await fetchAppointmentsRequest({
+        endpoint: '/api/appointments/byPatient',
+        method: 'GET',
+        params: {
+          patientId: patient.id
+        }
+      });
+      
+      // The data will be set via the useApiCall hook's data state
+    } catch (error) {
+      console.error('Failed to fetch appointments:', error);
+      setAppointments([]);
+    }
+  };
+
+  // Convert API status codes to display format
+  const convertStatusToDisplay = (apiStatus: string) => {
+    const statusMap: { [key: string]: string } = {
+      'BKD': 'Booked',
+      'ACT': 'Active',
+      'COM': 'Completed',
+      'CAN': 'Cancelled'
+    };
+    return statusMap[apiStatus] || apiStatus;
+  };
+
+  // Convert display status to API format
+  const convertStatusToApi = (displayStatus: string) => {
+    const statusMap: { [key: string]: string } = {
+      'Booked': 'BKD',
+      'Active': 'ACT',
+      'Completed': 'COM',
+      'Cancelled': 'CAN'
+    };
+    return statusMap[displayStatus] || displayStatus;
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return <CheckCircle className="h-4 w-4" />;
+      case 'active':
+        return <Activity className="h-4 w-4" />;
+      default:
+        return <CircleDashed className="h-4 w-4" />;
+    }
+  };
+
+  const handleUpdateStatus = async (appointmentId: number, newStatus: string) => {
+    try {
+      await updateAppointmentRequest({
+        endpoint: '/api/appointments',
+        method: 'PUT',
+        payload: {
+          appointmentID: appointmentId,
+          appointmentStatus: convertStatusToApi(newStatus)
+        }
+      });
+      console.log('Appointment status updated:', appointmentId, newStatus);
+      // Refresh appointments list
+      fetchAppointments();
+    } catch (error) {
+      console.error('Failed to update appointment status:', error);
+    }
+  };
   
   if (!patient) {
     return (
@@ -488,52 +572,141 @@ export function PatientProfile({ patient, onBack, onStartConsultation }) {
             </Card>
           </div>
 
-          {/* Recent Appointments */}
+          {/* All Appointments */}
           <Card className="border-slate-200">
             <CardHeader>
-              <CardTitle>Recent Appointments</CardTitle>
-              <CardDescription>Latest consultation history</CardDescription>
+              <CardTitle>All Appointments</CardTitle>
+              <CardDescription>Complete appointment history for this patient</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {appointmentHistory.slice(0, 3).map((appointment) => (
-                  <div 
-                    key={appointment.id} 
-                    className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
-                        <Calendar className="h-5 w-5 text-slate-600" />
+              {isLoadingAppointments && appointments.length === 0 ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : appointments.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <Calendar className="h-12 w-12 mx-auto mb-2 text-slate-300" />
+                  <p>No appointments found for this patient</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {appointments.map((appointment) => {
+                    const startTime = new Date(appointment.startTime);
+                    const endTime = new Date(appointment.endTime);
+                    const hours = startTime.getHours();
+                    const minutes = String(startTime.getMinutes()).padStart(2, '0');
+                    const timeString = `${hours}:${minutes}`;
+                    const endHours = endTime.getHours();
+                    const endMinutes = String(endTime.getMinutes()).padStart(2, '0');
+                    const dateString = startTime.toLocaleDateString('en-US', { 
+                      weekday: 'short', 
+                      month: 'short', 
+                      day: 'numeric', 
+                      year: 'numeric' 
+                    });
+                    
+                    return (
+                      <div 
+                        key={appointment.appointmentID} 
+                        className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:border-slate-300 hover:shadow-sm transition-all"
+                      >
+                        <div className="flex items-center space-x-4 flex-1">
+                          <div className="flex items-center justify-center w-16 h-16 bg-slate-100 rounded-lg">
+                            <div className="text-center">
+                              <div className="text-xs font-medium text-slate-600">
+                                {hours.toString().padStart(2, '0')}
+                              </div>
+                              <div className="text-lg font-bold text-slate-900">
+                                {minutes}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold text-slate-900">{dateString}</p>
+                            <p className="text-sm text-slate-600">{timeString} - {endHours}:{endMinutes}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="secondary" className={getStatusColor(convertStatusToDisplay(appointment.appointmentStatus))}>
+                            {getStatusIcon(convertStatusToDisplay(appointment.appointmentStatus))}
+                            <span className="ml-1 capitalize">{convertStatusToDisplay(appointment.appointmentStatus)}</span>
+                          </Badge>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => onStartConsultation(appointment)}
+                          >
+                            <Eye className="mr-1 h-3 w-3" />
+                            View
+                          </Button>
+                          <div className="relative">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8"
+                              onClick={() => setOpenMenuId(openMenuId === appointment.appointmentID ? null : appointment.appointmentID)}
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                            {openMenuId === appointment.appointmentID && (
+                              <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                                <div className="py-1" role="menu">
+                                  <button
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={() => {
+                                      onStartConsultation(appointment);
+                                      setOpenMenuId(null);
+                                    }}
+                                  >
+                                    Start Consultation
+                                  </button>
+                                  <div className="border-t border-gray-100"></div>
+                                  <button
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={() => {
+                                      handleUpdateStatus(appointment.appointmentID, 'Booked');
+                                      setOpenMenuId(null);
+                                    }}
+                                  >
+                                    Mark as Booked
+                                  </button>
+                                  <button
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={() => {
+                                      handleUpdateStatus(appointment.appointmentID, 'Active');
+                                      setOpenMenuId(null);
+                                    }}
+                                  >
+                                    Mark as Active
+                                  </button>
+                                  <button
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={() => {
+                                      handleUpdateStatus(appointment.appointmentID, 'Completed');
+                                      setOpenMenuId(null);
+                                    }}
+                                  >
+                                    Mark as Completed
+                                  </button>
+                                  <button
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={() => {
+                                      handleUpdateStatus(appointment.appointmentID, 'Cancelled');
+                                      setOpenMenuId(null);
+                                    }}
+                                  >
+                                    Mark as Cancelled
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-slate-900">{appointment.type}</p>
-                        <p className="text-sm text-slate-600">
-                          {appointment.date} at {appointment.time}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant="secondary" className={getStatusColor(appointment.status)}>
-                        {appointment.status}
-                      </Badge>
-                      {(appointment.status === 'Booked' || appointment.status === 'Active') && (
-                        <Button 
-                          size="sm" 
-                          onClick={() => onStartConsultation(appointment)}
-                        >
-                          Start
-                        </Button>
-                      )}
-                      {appointment.status === 'Completed' && (
-                        <Button variant="outline" size="sm">
-                          <Eye className="mr-1 h-3 w-3" />
-                          View
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

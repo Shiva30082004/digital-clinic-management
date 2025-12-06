@@ -244,20 +244,9 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation }) {
       // Small delay to ensure database write completes
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Check if appointment date matches selected date
-      const appointmentDate = new Date(newAppointment.date);
-      const selectedDateStr = formatDateForApi(selectedDate);
-      const appointmentDateStr = formatDateForApi(appointmentDate);
-      
-      // If appointment is on a different date, switch to that date
-      if (appointmentDateStr !== selectedDateStr) {
-        setSelectedDate(appointmentDate);
-        // The useEffect will automatically fetch appointments for the new date
-      } else {
-        // If on same date, clear cache and refetch
-        setLastFetchedDate('');
-        await fetchAppointments(selectedDate);
-      }
+      // Always refresh the current date view instead of switching dates
+      setLastFetchedDate(''); // Clear cache to force refetch
+      await fetchAppointments(selectedDate);
       
       // Close dialog and reset form after successful creation and refresh
       setIsNewAppointmentOpen(false);
