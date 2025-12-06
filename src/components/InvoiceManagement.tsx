@@ -273,10 +273,6 @@ export function InvoiceManagement() {
           <h1 className="text-3xl font-bold text-slate-900 mb-1">Invoices</h1>
           <p className="text-slate-600">{invoices.length} total invoices</p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="mr-2 h-4 w-4" />
-          New Invoice
-        </Button>
       </div>
 
       {/* Search */}
