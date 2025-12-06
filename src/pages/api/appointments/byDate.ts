@@ -1,4 +1,4 @@
-import { DOCTOR_ID_HEADER_KEY } from "@/constants/auth";
+import { DOCTOR_ID_HEADER_KEY, CLINIC_ID_HEADER_KEY, ROLE_HEADER_KEY } from "@/constants/auth";
 import { getDbConnection } from "@/lib/database";
 import ApiResponse from "@/types/ApiResponse";
 import Appointment from "@/types/Appointment";
@@ -9,8 +9,10 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Appointment[]>>
 ) {
-  // Get doctorID from headers (production) or query params (testing)
-  const doctorID = (req.headers[DOCTOR_ID_HEADER_KEY] as string) || (req.query.doctorId as string);
+  // Get user info from headers (production) or query params (testing)
+  const doctorID = (req.headers[DOCTOR_ID_HEADER_KEY] as string);
+  const clinicID = (req.headers[CLINIC_ID_HEADER_KEY] as string);
+  const role = (req.headers[ROLE_HEADER_KEY] as string);
 
   if (req.method !== "GET") {
     return res.status(405).json({ message: "Method not allowed" });
@@ -49,12 +51,28 @@ export default async function handler(
         p.LastName as patientLastName
       FROM Appointments a
       LEFT JOIN Patients p ON a.PatientID = p.PatientID
+    `;
+    
+    const values: any[] = [];
+
+    // Filter based on role
+    if (role === 'admin') {
+      // Admin: filter by clinicID (get all appointments for the clinic)
+      query += `
+      WHERE a.DoctorID IN (SELECT DoctorID FROM Doctors WHERE ClinicID = ?)
+        AND DATE(a.StartTime) >= ?
+        AND DATE(a.StartTime) <= ?
+      `;
+      values.push(clinicID, startDate, endDate);
+    } else {
+      // Doctor: filter by doctorID
+      query += `
       WHERE a.DoctorID = ?
         AND DATE(a.StartTime) >= ?
         AND DATE(a.StartTime) <= ?
-    `;
-    
-    const values: any[] = [doctorID, startDate, endDate];
+      `;
+      values.push(doctorID, startDate, endDate);
+    }
 
     // Add status filter if provided
     if (status) {
