@@ -87,11 +87,15 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation, doctorIn
   const { invokeRequest: createAppointmentRequest } = useApiCall();
   const { invokeRequest: fetchAppointmentsRequest, data: appointmentsData, isLoading: isLoadingAppointments } = useApiCall<any[]>();
   const { invokeRequest: fetchPatientsRequest, data: patientsData, isLoading: isLoadingPatients } = useApiCall<any[]>();
+  const { invokeRequest: fetchRevenueRequest, data: revenueData, isLoading: isLoadingRevenue } = useApiCall<any[]>();
+  const { invokeRequest: fetchVisitsRequest, data: visitsData, isLoading: isLoadingVisits } = useApiCall<any[]>();
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [appointments, setAppointments] = useState<any[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
+  const [revenueStats, setRevenueStats] = useState<any[]>([]);
+  const [visitStats, setVisitStats] = useState<any[]>([]);
   const lastFetchedDateRef = useRef<string>(''); // Use ref instead of state for persistence
   const [newAppointment, setNewAppointment] = useState({
     patientId: '',
@@ -124,6 +128,20 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation, doctorIn
     }
   }, [patientsData]);
 
+  // Update revenue stats when data changes
+  useEffect(() => {
+    if (revenueData) {
+      setRevenueStats(revenueData);
+    }
+  }, [revenueData]);
+
+  // Update visit stats when data changes
+  useEffect(() => {
+    if (visitsData) {
+      setVisitStats(visitsData);
+    }
+  }, [visitsData]);
+
   // Fetch patients on mount
   useEffect(() => {
     fetchPatientsRequest({
@@ -131,6 +149,25 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation, doctorIn
       method: 'GET'
     });
   }, []);
+
+  // Fetch analytics data on mount (only for admin)
+  useEffect(() => {
+    if (doctorInfo?.role === 'admin') {
+      // Fetch revenue data (last 6 months)
+      fetchRevenueRequest({
+        endpoint: '/api/analytics/revenue',
+        method: 'GET',
+        params: { limit: 6 }
+      });
+
+      // Fetch visits data (last 6 months)
+      fetchVisitsRequest({
+        endpoint: '/api/analytics/visits',
+        method: 'GET',
+        params: { limit: 6 }
+      });
+    }
+  }, [doctorInfo]);
 
   // Helper function to format date as YYYY-MM-DD
   const formatDateForApi = (date: Date): string => {
@@ -494,24 +531,83 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation, doctorIn
         </CardContent>
       </Card>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-slate-200">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <TrendingUp className="mr-2 h-5 w-5 text-purple-600" />
-              Monthly Income Trend
-            </CardTitle>
-            <CardDescription>Revenue overview for the past 6 months</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg flex items-center justify-center border border-slate-200">
-              <div className="text-center text-slate-500">
-                <TrendingUp className="h-12 w-12 mx-auto mb-2 text-purple-400" />
-                <p className="text-sm">Chart: Jan $45k → Jun $67k</p>
-                <p className="text-xs mt-1">+48% growth</p>
+      {/* Charts - Only visible for admins */}
+      {doctorInfo?.role === 'admin' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="border-slate-200">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <TrendingUp className="mr-2 h-5 w-5 text-purple-600" />
+                Monthly Income Trend
+              </CardTitle>
+              <CardDescription>Revenue overview for the past 6 months</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingRevenue ? (
+              <div className="h-64 bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg flex items-center justify-center border border-slate-200">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
               </div>
-            </div>
+            ) : revenueStats.length === 0 ? (
+              <div className="h-64 bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg flex items-center justify-center border border-slate-200">
+                <div className="text-center text-slate-500">
+                  <TrendingUp className="h-12 w-12 mx-auto mb-2 text-purple-400" />
+                  <p className="text-sm">No revenue data available</p>
+                  <p className="text-xs mt-1">Complete appointments to see revenue statistics</p>
+                </div>
+              </div>
+            ) : (
+              <div className="h-64 bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg p-6 border border-slate-200">
+                <div className="space-y-3">
+                  {revenueStats.slice().reverse().map((stat, index) => {
+                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    const monthName = monthNames[stat.accountMonth - 1];
+                    const revenue = stat.totalRevenue || 0;
+                    const maxRevenue = Math.max(...revenueStats.map(s => s.totalRevenue || 0));
+                    const barWidth = maxRevenue > 0 ? (revenue / maxRevenue) * 100 : 0;
+                    
+                    return (
+                      <div key={index} className="flex items-center gap-3">
+                        <div className="text-xs font-medium text-slate-600 w-12">
+                          {monthName} '{String(stat.accountYear).slice(-2)}
+                        </div>
+                        <div className="flex-1 bg-white rounded-full h-6 overflow-hidden border border-purple-200">
+                          <div 
+                            className="h-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-end pr-2 transition-all duration-500"
+                            style={{ width: `${barWidth}%` }}
+                          >
+                            {barWidth > 20 && (
+                              <span className="text-xs font-semibold text-white">
+                                ${(revenue / 1000).toFixed(1)}k
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {barWidth <= 20 && (
+                          <div className="text-xs font-semibold text-slate-700 w-16 text-right">
+                            ${(revenue / 1000).toFixed(1)}k
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {revenueStats.length >= 2 && (
+                  <div className="mt-4 pt-3 border-t border-purple-200">
+                    <div className="flex justify-between text-xs text-slate-600">
+                      <span>Latest: ${((revenueStats[0]?.totalRevenue || 0) / 1000).toFixed(1)}k</span>
+                      <span>
+                        {(() => {
+                          const latest = revenueStats[0]?.totalRevenue || 0;
+                          const previous = revenueStats[1]?.totalRevenue || 0;
+                          const growth = previous > 0 ? ((latest - previous) / previous * 100) : 0;
+                          return growth >= 0 ? `↑ ${growth.toFixed(1)}% growth` : `↓ ${Math.abs(growth).toFixed(1)}% decline`;
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -519,21 +615,75 @@ export function DoctorDashboard({ onPatientSelect, onStartConsultation, doctorIn
           <CardHeader>
             <CardTitle className="flex items-center">
               <Users className="mr-2 h-5 w-5 text-green-600" />
-              Patient Visits This Week
+              Monthly Patient Visits
             </CardTitle>
-            <CardDescription>Daily patient visit statistics</CardDescription>
+            <CardDescription>Visit statistics for the past 6 months</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-64 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg flex items-center justify-center border border-slate-200">
-              <div className="text-center text-slate-500">
-                <Activity className="h-12 w-12 mx-auto mb-2 text-green-400" />
-                <p className="text-sm">Chart: Mon 12, Tue 15, Wed 8, Thu 18...</p>
-                <p className="text-xs mt-1">Average: 13 visits/day</p>
+            {isLoadingVisits ? (
+              <div className="h-64 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg flex items-center justify-center border border-slate-200">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
               </div>
-            </div>
+            ) : visitStats.length === 0 ? (
+              <div className="h-64 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg flex items-center justify-center border border-slate-200">
+                <div className="text-center text-slate-500">
+                  <Activity className="h-12 w-12 mx-auto mb-2 text-green-400" />
+                  <p className="text-sm">No visit data available</p>
+                  <p className="text-xs mt-1">Schedule appointments to see visit statistics</p>
+                </div>
+              </div>
+            ) : (
+              <div className="h-64 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-6 border border-slate-200">
+                <div className="space-y-3">
+                  {visitStats.slice().reverse().map((stat, index) => {
+                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    const monthName = monthNames[stat.visitMonth - 1];
+                    const visits = stat.totalVisits || 0;
+                    const maxVisits = Math.max(...visitStats.map(s => s.totalVisits || 0));
+                    const barWidth = maxVisits > 0 ? (visits / maxVisits) * 100 : 0;
+                    
+                    return (
+                      <div key={index} className="flex items-center gap-3">
+                        <div className="text-xs font-medium text-slate-600 w-12">
+                          {monthName} '{String(stat.visitYear).slice(-2)}
+                        </div>
+                        <div className="flex-1 bg-white rounded-full h-6 overflow-hidden border border-green-200">
+                          <div 
+                            className="h-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-end pr-2 transition-all duration-500"
+                            style={{ width: `${barWidth}%` }}
+                          >
+                            {barWidth > 20 && (
+                              <span className="text-xs font-semibold text-white">
+                                {visits} visits
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {barWidth <= 20 && (
+                          <div className="text-xs font-semibold text-slate-700 w-20 text-right">
+                            {visits} visits
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {visitStats.length > 0 && (
+                  <div className="mt-4 pt-3 border-t border-green-200">
+                    <div className="flex justify-between text-xs text-slate-600">
+                      <span>Latest: {visitStats[0]?.totalVisits || 0} visits</span>
+                      <span>
+                        Avg: {Math.round(visitStats.reduce((acc, s) => acc + (s.totalVisits || 0), 0) / visitStats.length)} visits/month
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
-      </div>
+        </div>
+      )}
 
       {/* New Appointment Dialog */}
       <Dialog open={isNewAppointmentOpen} onOpenChange={setIsNewAppointmentOpen}>
