@@ -14,7 +14,7 @@ WORKDIR /app
 COPY package*.json ./
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD true
-RUN npm install
+RUN npm ci
 
 COPY . .
 
