@@ -30,6 +30,14 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -47,7 +55,12 @@ import {
 import useApiCall from "@/hooks/useApiCall";
 import Appointment from "@/types/Appointment";
 
-export function PatientProfile({ patientId, onBack, onStartConsultation }) {
+export function PatientProfile({
+  patientId,
+  onBack,
+  onStartConsultation,
+  doctorInfo
+}) {
   const {
     data: appointments = [],
     isLoading: isLoadingAppointments,
@@ -80,6 +93,12 @@ export function PatientProfile({ patientId, onBack, onStartConsultation }) {
     dateOfBirth: "",
     bloodGroup: ""
   });
+
+  const isOwnAppointment = (appointment: any) => {
+    return appointment.doctorID === doctorInfo?.doctorId;
+  };
+
+  const isAdmin = doctorInfo?.role === "admin";
 
   // Convert API status codes to display format
   const convertStatusToDisplay = (apiStatus: string) => {
@@ -143,6 +162,16 @@ export function PatientProfile({ patientId, onBack, onStartConsultation }) {
       }
     },
     fetchOnMount: true
+  });
+
+  const { data: invoices = [] } = useApiCall({
+    request: {
+      endpoint: "/api/invoice",
+      params: {
+        patientId
+      }
+    },
+    fetchOnMount: !!patientId
   });
 
   const patientName = useMemo(
@@ -597,9 +626,10 @@ export function PatientProfile({ patientId, onBack, onStartConsultation }) {
         defaultValue="overview"
         className="space-y-4"
         onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">Appointments</TabsTrigger>
           <TabsTrigger value="vitals">Vitals & Charts</TabsTrigger>
+          <TabsTrigger value="invoices">Invoices</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -643,6 +673,10 @@ export function PatientProfile({ patientId, onBack, onStartConsultation }) {
                       day: "numeric",
                       year: "numeric"
                     });
+
+                    const canViewAppointment =
+                      (!isAdmin || isOwnAppointment(appointment)) &&
+                      appointment?.appointmentStatus !== "CAN";
 
                     return (
                       <div
@@ -690,7 +724,13 @@ export function PatientProfile({ patientId, onBack, onStartConsultation }) {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => onStartConsultation(appointment)}>
+                            onClick={() => onStartConsultation(appointment)}
+                            disabled={!canViewAppointment}
+                            className={
+                              !canViewAppointment
+                                ? "opacity-50 cursor-not-allowed"
+                                : ""
+                            }>
                             <Eye className="mr-1 h-3 w-3" />
                             View
                           </Button>
@@ -837,6 +877,72 @@ export function PatientProfile({ patientId, onBack, onStartConsultation }) {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="invoices" className="space-y-6">
+          <Card className="border-slate-200">
+            <CardHeader>
+              <CardTitle>All Invoices</CardTitle>
+              <CardDescription>Manage and track all invoices</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {(invoices || []).length === 0 ? (
+                <Card className="border-slate-200">
+                  <CardContent className="py-12 text-center">
+                    <FileText className="h-12 w-12 mx-auto mb-4 text-slate-400" />
+                    <h3 className="font-semibold text-slate-900 mb-2">
+                      No invoices found
+                    </h3>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Invoice ID</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead className="text-right">View</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(invoices || []).map((invoice) => (
+                      <TableRow
+                        key={invoice.InvoiceID}
+                        className="cursor-pointer hover:bg-slate-50">
+                        <TableCell className="font-medium">
+                          {invoice.InvoiceID}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center text-slate-600">
+                            <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                            {new Date(
+                              invoice?.StartTime
+                            ).toLocaleDateString() || "-"}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-semibold">
+                          ${(Number(invoice.Amount) || 0).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                onStartConsultation(invoice.AppointmentID)
+                              }>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

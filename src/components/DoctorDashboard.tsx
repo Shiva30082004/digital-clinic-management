@@ -169,15 +169,13 @@ export function DoctorDashboard({ onStartConsultation, doctorInfo }) {
       // Fetch revenue data (last 6 months)
       fetchRevenueRequest({
         endpoint: "/api/analytics/revenue",
-        method: "GET",
-        params: { limit: 6 }
+        method: "GET"
       });
 
       // Fetch visits data (last 6 months)
       fetchVisitsRequest({
         endpoint: "/api/analytics/visits",
-        method: "GET",
-        params: { limit: 6 }
+        method: "GET"
       });
     }
   }, [doctorInfo]);
@@ -437,7 +435,8 @@ export function DoctorDashboard({ onStartConsultation, doctorInfo }) {
 
                 // Check if this appointment can be viewed/edited by current doctor
                 const canViewAppointment =
-                  !isAdmin || isOwnAppointment(appointment);
+                  (!isAdmin || isOwnAppointment(appointment)) &&
+                  appointment?.appointmentStatus !== "CAN";
 
                 return (
                   <div

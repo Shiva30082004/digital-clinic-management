@@ -1,6 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getDbConnection } from "@/lib/database";
-import { ROLE_HEADER_KEY, DOCTOR_ID_HEADER_KEY,CLINIC_ID_HEADER_KEY} from "@/constants/auth";
+import {
+  ROLE_HEADER_KEY,
+  DOCTOR_ID_HEADER_KEY,
+  CLINIC_ID_HEADER_KEY
+} from "@/constants/auth";
 import ApiResponse from "@/types/ApiResponse";
 import Consultation from "@/types/Consultation";
 
@@ -14,14 +18,13 @@ async function handleGet(
     ? appointmentIDRaw[0]
     : appointmentIDRaw;
 
-  const role = req.headers[ROLE_HEADER_KEY] as string;
   const doctorID = req.headers[DOCTOR_ID_HEADER_KEY] as string;
-  const clinicID = req.headers[CLINIC_ID_HEADER_KEY] as string;
-
 
   const conn = await getDbConnection();
   if (!conn) {
-    return res.status(500).json({ error: "Database connection failed" } as ConsultationResponse);
+    return res
+      .status(500)
+      .json({ error: "Database connection failed" } as ConsultationResponse);
   }
 
   try {
@@ -29,56 +32,33 @@ async function handleGet(
     let params: any[] = [];
 
     if (appointmentID) {
-        query = `
+      query = `
           SELECT *
           FROM Consultations
           NATURAL JOIN Appointments
           NATURAL JOIN Doctors
           JOIN Patients ON Appointments.PatientID = Patients.patientId
-          WHERE AppointmentID = ?;
+          WHERE AppointmentID = ? AND DoctorID = ?;
         `;
-        params = [appointmentID];
-
+      params = [appointmentID, doctorID];
 
       const [rows] = await conn.execute<Consultation[]>(query, params);
 
       if (!rows || rows.length === 0) {
-        return res.status(200).json({ data: null} as ConsultationResponse);
+        return res.status(200).json({ data: null } as ConsultationResponse);
       }
 
       return res.status(200).json({ data: rows[0] } as ConsultationResponse);
+    } else {
+      return res
+        .status(400)
+        .json({ error: "appointmentID is required" } as ConsultationResponse);
     }
-
-    if (role === "admin") {
-        query = `
-          SELECT *
-          FROM Consultations 
-          NATURAL JOIN Appointments 
-          NATURAL JOIN Doctors
-          JOIN Patients ON Appointments.PatientID = Patients.patientId
-          WHERE ClinicID = ?;
-        `;
-        params = [clinicID]; 
-      } else if (role === "consultant") {
-        query = `
-          SELECT *
-          FROM Consultations
-          NATURAL JOIN Appointments
-          NATURAL JOIN Doctors
-          JOIN Patients ON Appointments.PatientID = Patients.patientId
-          WHERE DoctorID = ?
-        `;
-        params = [doctorID];
-      } else {
-      return res.status(403).json({ error: "Forbidden" } as ConsultationResponse);
-    } 
-
-    const [rows] = await conn.execute<Consultation[]>(query, params);
-
-    return res.status(200).json({data: rows} as ConsultationResponse);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" } as ConsultationResponse);
+    return res
+      .status(500)
+      .json({ error: "Internal server error" } as ConsultationResponse);
   } finally {
     conn.release();
   }
@@ -103,12 +83,16 @@ async function handlePost(
   } = req.body;
 
   if (!appointmentID) {
-    return res.status(400).json({error: "appointmentID is required"} as ConsultationResponse);
+    return res
+      .status(400)
+      .json({ error: "appointmentID is required" } as ConsultationResponse);
   }
 
   const conn = await getDbConnection();
   if (!conn) {
-    return res.status(500).json({ error: "Database connection failed" } as ConsultationResponse);
+    return res
+      .status(500)
+      .json({ error: "Database connection failed" } as ConsultationResponse);
   }
 
   try {
@@ -148,10 +132,12 @@ async function handlePost(
       [insertId]
     );
 
-    return res.status(201).json({data: rows[0]} as ConsultationResponse);
+    return res.status(201).json({ data: rows[0] } as ConsultationResponse);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" } as ConsultationResponse);
+    return res
+      .status(500)
+      .json({ error: "Internal server error" } as ConsultationResponse);
   } finally {
     conn.release();
   }
@@ -176,7 +162,9 @@ async function handlePut(
   } = req.body;
 
   if (!appointmentID) {
-    return res.status(400).json({error: "appointmentID is required"} as ConsultationResponse);
+    return res
+      .status(400)
+      .json({ error: "appointmentID is required" } as ConsultationResponse);
   }
 
   const role = req.headers[ROLE_HEADER_KEY] as string;
@@ -184,7 +172,9 @@ async function handlePut(
 
   const conn = await getDbConnection();
   if (!conn) {
-    return res.status(500).json({ error: "Database connection failed" } as ConsultationResponse);
+    return res
+      .status(500)
+      .json({ error: "Database connection failed" } as ConsultationResponse);
   }
 
   try {
@@ -194,23 +184,24 @@ async function handlePut(
     );
 
     if (!apptRows || apptRows.length === 0) {
-      return res.status(400).json({error: "Appointment not found for this consultation"} as ConsultationResponse);
+      return res.status(400).json({
+        error: "Appointment not found for this consultation"
+      } as ConsultationResponse);
     }
 
     const apptStatus = apptRows[0].AppointmentStatus as string;
     const apptDoctorID = String(apptRows[0].DoctorID);
 
     if (apptStatus === "COM") {
-       return res.status(400).json({
-         error: "Consultation cannot be edited for completed appointments"
-       } as ConsultationResponse);
-     }
+      return res.status(400).json({
+        error: "Consultation cannot be edited for completed appointments"
+      } as ConsultationResponse);
+    }
 
-    if (
-      (role === "admin" || role === "consultant") &&
-      apptDoctorID !== doctorID
-    ) {
-      return res.status(403).json({error: "Not allowed to modify another doctor's consultation"} as ConsultationResponse);
+    if (apptDoctorID !== doctorID) {
+      return res.status(403).json({
+        error: "Not allowed to modify another doctor's consultation"
+      } as ConsultationResponse);
     }
 
     const [result]: any = await conn.execute(
@@ -244,7 +235,9 @@ async function handlePut(
     );
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({error: "Consultation not found"} as ConsultationResponse);
+      return res
+        .status(404)
+        .json({ error: "Consultation not found" } as ConsultationResponse);
     }
 
     const [rows] = await conn.execute<Consultation[]>(
@@ -257,12 +250,13 @@ async function handlePut(
     } as ConsultationResponse);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" } as ConsultationResponse);
+    return res
+      .status(500)
+      .json({ error: "Internal server error" } as ConsultationResponse);
   } finally {
     conn.release();
   }
 }
-
 
 async function handleDelete(
   req: NextApiRequest,
@@ -274,12 +268,16 @@ async function handleDelete(
     : appointmentIDRaw;
 
   if (!appointmentID) {
-    return res.status(400).json({error: "appointmentID is required"} as ConsultationResponse);
+    return res
+      .status(400)
+      .json({ error: "appointmentID is required" } as ConsultationResponse);
   }
 
   const conn = await getDbConnection();
   if (!conn) {
-    return res.status(500).json({ error: "Database connection failed" } as ConsultationResponse);
+    return res
+      .status(500)
+      .json({ error: "Database connection failed" } as ConsultationResponse);
   }
 
   try {
@@ -289,13 +287,17 @@ async function handleDelete(
     );
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({error: "Consultation not found"} as ConsultationResponse);
+      return res
+        .status(404)
+        .json({ error: "Consultation not found" } as ConsultationResponse);
     }
 
     return res.status(204).end();
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" } as ConsultationResponse);
+    return res
+      .status(500)
+      .json({ error: "Internal server error" } as ConsultationResponse);
   } finally {
     conn.release();
   }

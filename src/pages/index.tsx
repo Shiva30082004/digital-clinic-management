@@ -4,7 +4,6 @@ import { DoctorDashboard } from "@/components/DoctorDashboard";
 import { PatientList } from "@/components/PatientList";
 import { PatientProfile } from "@/components/PatientProfile";
 import { ConsultationScreen } from "@/components/ConsultationScreen";
-import { InvoiceManagement } from "@/components/InvoiceManagement";
 import {
   LayoutDashboard,
   Users,
@@ -119,8 +118,7 @@ export default function App() {
 
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "patients", label: "Patients", icon: Users },
-    { id: "invoices", label: "Invoices", icon: FileText }
+    { id: "patients", label: "Patients", icon: Users }
   ];
 
   const onStartConsultation = async (appointment: Appointment) => {
@@ -166,6 +164,7 @@ export default function App() {
       case "patient-profile":
         return (
           <PatientProfile
+            doctorInfo={doctorProfileData}
             patientId={selectedPatientId}
             onBack={() => setCurrentScreen("patients")}
             onStartConsultation={onStartConsultation}
@@ -174,13 +173,12 @@ export default function App() {
       case "consultation":
         return (
           <ConsultationScreen
-            appointment={selectedAppointment}
+            appointmentId={selectedAppointment?.appointmentID || ""}
             onComplete={() => setCurrentScreen("dashboard")}
             onCancel={() => setCurrentScreen("dashboard")}
+            onPatientSelect={onPatientSelect}
           />
         );
-      case "invoices":
-        return <InvoiceManagement />;
       default:
         return null;
     }

@@ -1,6 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getDbConnection } from "@/lib/database";
-import { ROLE_HEADER_KEY, DOCTOR_ID_HEADER_KEY } from "@/constants/auth";
+import {
+  ROLE_HEADER_KEY,
+  DOCTOR_ID_HEADER_KEY,
+  CLINIC_ID_HEADER_KEY
+} from "@/constants/auth";
 import ApiResponse from "@/types/ApiResponse";
 import Invoice from "@/types/Invoice";
 
@@ -10,11 +14,9 @@ async function handleGet(
   req: NextApiRequest,
   res: NextApiResponse<InvoiceResponse>
 ) {
-  const invoiceIDRaw = req.query.invoiceID;
-  const invoiceID = Array.isArray(invoiceIDRaw) ? invoiceIDRaw[0] : invoiceIDRaw;
-
   const role = req.headers[ROLE_HEADER_KEY] as string;
   const doctorID = req.headers[DOCTOR_ID_HEADER_KEY] as string;
+  const clinicID = req.headers[CLINIC_ID_HEADER_KEY] as string;
 
   const conn = await getDbConnection();
   if (!conn) {
@@ -27,53 +29,24 @@ async function handleGet(
     let query = "";
     let params: any[] = [];
 
-    if (invoiceID) {
-      if (role === "ADMIN_DOCTOR" || role === "CONSULTANT") {
-        query = `
-          SELECT i.*
-          FROM Invoices i
-          JOIN Appointments a ON i.AppointmentID = a.AppointmentID
-          WHERE i.InvoiceID = ? AND a.DoctorID = ?;
-        `;
-        params = [invoiceID, doctorID];
+    const patientId = req.query.patientId as string | undefined;
+
+    if (patientId) {
+      if (role === "admin") {
+        query = `SELECT * FROM Invoices NATURAL JOIN Appointments NATURAL JOIN Doctors WHERE patientId = ? AND clinicID = ? ORDER BY invoiceId DESC;`;
+        params = [patientId, clinicID];
       } else {
-        query = "SELECT * FROM Invoices WHERE InvoiceID = ?;";
-        params = [invoiceID];
+        query = `SELECT * FROM Invoices NATURAL JOIN Appointments WHERE patientId = ? AND doctorID = ? ORDER BY invoiceId DESC;`;
+        params = [patientId, doctorID];
       }
-
-      const [rows] = await conn.execute<Invoice[]>(query, params);
-
-      if (!rows || rows.length === 0) {
-        return res
-          .status(404)
-          .json({ error: "Invoice not found" } as InvoiceResponse);
-      }
-
-      return res.status(200).json({ data: rows[0] } as InvoiceResponse);
-    }
-
-    if (role === "ADMIN_DOCTOR") {
-      query = `
-        SELECT i.*
-        FROM Invoices i
-        JOIN Appointments a ON i.AppointmentID = a.AppointmentID;
-      `;
-      params = [];
-    } else if (role === "CONSULTANT") {
-      query = `
-        SELECT i.*
-        FROM Invoices i
-        JOIN Appointments a ON i.AppointmentID = a.AppointmentID
-        WHERE a.DoctorID = ?;
-      `;
-      params = [doctorID];
     } else {
-      query = `
-        SELECT i.*
-        FROM Invoices i
-        JOIN Appointments a ON i.AppointmentID = a.AppointmentID;
-      `;
-      params = [];
+      if (role === "admin") {
+        query = `SELECT * FROM Invoices NATURAL JOIN Appointments NATURAL JOIN Doctors WHERE clinicID = ? ORDER BY invoiceId DESC;`;
+        params = [clinicID];
+      } else {
+        query = `SELECT * FROM Invoices NATURAL JOIN Appointments WHERE doctorID = ? ORDER BY invoiceId DESC;`;
+        params = [doctorID];
+      }
     }
 
     const [rows] = await conn.execute<Invoice[]>(query, params);
@@ -190,7 +163,9 @@ async function handleDelete(
   res: NextApiResponse<InvoiceResponse>
 ) {
   const invoiceIDRaw = req.query.invoiceID;
-  const invoiceID = Array.isArray(invoiceIDRaw) ? invoiceIDRaw[0] : invoiceIDRaw;
+  const invoiceID = Array.isArray(invoiceIDRaw)
+    ? invoiceIDRaw[0]
+    : invoiceIDRaw;
 
   if (!invoiceID) {
     return res.status(400).json({
