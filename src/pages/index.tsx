@@ -30,7 +30,7 @@ import { getFirebaseAuth } from "@/utils/firebase";
 import { signOut } from "firebase/auth";
 import useApiCall from "@/hooks/useApiCall";
 import Appointment from "@/types/Appointment";
-import Document from "@/types/Document";
+import useGeneratePrescription from "@/hooks/useGeneratePrescription";
 
 export default function App() {
   const router = useRouter();
@@ -103,19 +103,7 @@ export default function App() {
 
   const { invokeRequest: invokeChangeAppointmentStatus } = useApiCall();
 
-  const { invokeRequest: invokeGeneratePrescription } = useApiCall<Document>();
-
-  const openPDFInNewWindow = async (data: Document) => {
-    const byteCharacters = atob(data);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
-    const file = new Blob([byteArray], { type: "application/pdf;base64" });
-    const fileURL = URL.createObjectURL(file);
-    window.open(fileURL);
-  };
+  const { invokeGeneratePrescription } = useGeneratePrescription();
 
   // Show loading or nothing while checking auth
   if (isLoading) {
@@ -152,16 +140,7 @@ export default function App() {
         setCurrentScreen("consultation");
         break;
       case "COM":
-        await invokeGeneratePrescription(
-          {
-            endpoint: "/api/document/generate",
-            params: { appointmentId: appointment?.appointmentID || "" },
-            method: "GET"
-          },
-          {
-            onSuccess: openPDFInNewWindow
-          }
-        );
+        await invokeGeneratePrescription(appointment?.appointmentID || "");
         break;
       case "CAN":
       default:
