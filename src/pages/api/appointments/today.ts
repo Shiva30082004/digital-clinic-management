@@ -8,7 +8,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Appointment[]>>
 ) {
-  const doctorID = (req.headers[DOCTOR_ID_HEADER_KEY] as string) || (req.query.doctorId as string);
+  const doctorID = (req.headers[DOCTOR_ID_HEADER_KEY] as string);
 
   if (req.method !== "GET") {
     return res.status(405).json({ message: "Method not allowed" });

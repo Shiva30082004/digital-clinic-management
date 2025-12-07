@@ -9,9 +9,9 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Appointment | Appointment[]>>
 ) {
-  // Get doctorID from headers or for testing, query params
-  const doctorID = (req.headers[DOCTOR_ID_HEADER_KEY] as string) || (req.query.doctorId as string);
-  const clinicID = (req.headers[CLINIC_ID_HEADER_KEY] as string) || (req.query.clinicId as string);
+  // Get doctorID from headers 
+  const doctorID = (req.headers[DOCTOR_ID_HEADER_KEY] as string);
+  const clinicID = (req.headers[CLINIC_ID_HEADER_KEY] as string);
 
   
   if (req.method === "GET") {

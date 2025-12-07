@@ -8,10 +8,10 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Appointment[]>>
 ) {
-  // Get user info from headers (production) or query params (testing)
-  const doctorID = (req.headers[DOCTOR_ID_HEADER_KEY] as string) || (req.query.doctorId as string);
-  const clinicID = (req.headers[CLINIC_ID_HEADER_KEY] as string) || (req.query.clinicId as string);
-  const role = (req.headers[ROLE_HEADER_KEY] as string) || (req.query.role as string);
+  // Get user info from headers (production)
+  const doctorID = (req.headers[DOCTOR_ID_HEADER_KEY] as string);
+  const clinicID = (req.headers[CLINIC_ID_HEADER_KEY] as string);
+  const role = (req.headers[ROLE_HEADER_KEY] as string);
 
   if (req.method !== "GET") {
     return res.status(405).json({ message: "Method not allowed" });
