@@ -4,8 +4,7 @@ import { ROLE_HEADER_KEY, DOCTOR_ID_HEADER_KEY,CLINIC_ID_HEADER_KEY} from "@/con
 import ApiResponse from "@/types/ApiResponse";
 import Consultation from "@/types/Consultation";
 
-type ConsultationResponse = ApiResponse<Consultation | Consultation[]>;
-
+type ConsultationResponse = ApiResponse<Consultation | Consultation[] | null>;
 async function handleGet(
   req: NextApiRequest,
   res: NextApiResponse<ConsultationResponse>
@@ -44,7 +43,7 @@ async function handleGet(
       const [rows] = await conn.execute<Consultation[]>(query, params);
 
       if (!rows || rows.length === 0) {
-        return res.status(404).json({ error: "Consultation not found" } as ConsultationResponse);
+        return res.status(200).json({ data: null} as ConsultationResponse);
       }
 
       return res.status(200).json({ data: rows[0] } as ConsultationResponse);
