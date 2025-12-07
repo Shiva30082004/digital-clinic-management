@@ -49,8 +49,10 @@ export function PatientList({ onPatientSelect }: {
   });
 
   const {
-    data: patients
-  }: { data: Patient[] | null } = useApiCall({
+    data: patients,
+    refetch,
+    invokeRequest
+  } = useApiCall<Patient[]>({
     request: {
       endpoint: "/api/patient",
       params: { search: searchTerm }
@@ -58,31 +60,20 @@ export function PatientList({ onPatientSelect }: {
     fetchOnMount: true
   });
 
+
   const handleAddPatient = async () => {
     try {
-      const gender = newPatient.gender;
-
-      const res = await fetch("/api/patient", {
+      await invokeRequest({
+        endpoint: "/api/patient",
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          [CLINIC_ID_HEADER_KEY]: "242" 
-        },
-        body: JSON.stringify({
+        payload: {
           firstName: newPatient.firstName,
           lastName: newPatient.lastName || null,
           emailAddress: newPatient.email || null,
-          gender,
+          gender: newPatient.gender,
           dateOfBirth: newPatient.dateOfBirth || null
-        })
+        }
       });
-
-      const { error } = await res.json();
-
-      if (!res.ok) {
-        alert(error || "Error creating patient");
-        return;
-      }
 
       setIsAddPatientOpen(false);
       setNewPatient({
@@ -93,13 +84,13 @@ export function PatientList({ onPatientSelect }: {
         email: ""
       });
 
-      window.location.reload();
+      // instead of window.location.reload()
+      refetch();
     } catch (err) {
       console.error("Error creating patient", err);
-      alert("Something went wrong while creating patient");
+      alert("Error creating patient");
     }
   };
-
 
   return (
     <div className="space-y-6">
@@ -140,7 +131,7 @@ export function PatientList({ onPatientSelect }: {
           <Card
             key={patient.patientId}
             className="border-slate-200 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer group"
-            onClick={() => onPatientSelect(patient.patientId || "")}>
+            onClick={() => onPatientSelect(patient.patientId)}>
             <CardContent className="p-6">
               <div className="space-y-4">
                 {/* Patient Header */}

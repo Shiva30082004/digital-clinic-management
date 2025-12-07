@@ -73,7 +73,7 @@ const mockDocuments = [
 ];
 
 type PatientProfileProps = {
-  patientId: string;
+  patientId: number;
   onBack: () => void;
   onStartConsultation: (appointment: any) => void; // you can refine later
 };
@@ -97,26 +97,17 @@ export function PatientProfile({ patientId, onBack, onStartConsultation }: Patie
   });
 
   const {
-    isLoading = false,
-    data: patient
-  }: {
-    isLoading: boolean;
-    data: Patient | null;
-  } = useApiCall({
+    isLoading,
+    data: patient,
+    refetch,
+    invokeRequest
+  } = useApiCall<Patient>({
     request: {
       endpoint: "/api/patient",
       params: { id: patientId }
     },
     fetchOnMount: true
   });
- 
-  if (!patient) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-slate-500">Patient not found.</div>
-      </div>
-    );
-  }
 
 
   const patientName = useMemo(
@@ -161,61 +152,47 @@ export function PatientProfile({ patientId, onBack, onStartConsultation }: Patie
 
   const handleSaveEdit = async () => {
     try {
-      const res = await fetch("/api/patient", {
+      await invokeRequest({
+        endpoint: "/api/patient",
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          [CLINIC_ID_HEADER_KEY]: "242"
-        },
-        body: JSON.stringify({
+        payload: {
           patientId,
           firstName: editedPatient.firstName,
           lastName: editedPatient.lastName,
           emailAddress: editedPatient.emailAddress,
           dateOfBirth: editedPatient.dateOfBirth
-        })
+        }
       });
 
-      const { error } = await res.json();
-
-      if (!res.ok) {
-        alert(error || "Failed to update patient");
-        return;
-      }
-
       setShowEditProfile(false);
-      window.location.reload();
+
+      // refresh patient details from backend
+      refetch();
     } catch (err) {
       console.error("Error updating patient", err);
-      alert("Something went wrong while updating patient");
-    } 
+      alert("Failed to update patient");
+    }
   };
+
 
   const handleDeletePatient = async () => {
     if (!confirm("Are you sure you want to delete this patient?")) return;
 
     try {
-      const res = await fetch(`/api/patient?id=${patientId}`, {
+      await invokeRequest({
+        endpoint: "/api/patient",
         method: "DELETE",
-        headers: {
-          [CLINIC_ID_HEADER_KEY]: "242"
-        }
+        params: { id: patientId }
       });
 
-      const { error } = await res.json();
-
-      if (!res.ok) {
-        alert(error || "Failed to delete patient");
-        return;
-      }
-
       alert("Patient deleted successfully");
-      onBack(); // Go back to list
+      onBack();
     } catch (err) {
       console.error("Error deleting patient", err);
-      alert("Something went wrong while deleting the patient");
+      alert("Failed to delete patient");
     }
   };
+
 
 
   const getStatusColor = (status: string) => {
