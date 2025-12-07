@@ -85,7 +85,9 @@ export function ConsultationScreen({
     bloodPressure: "",
     heartRate: "",
     temperature: "",
-    weight: ""
+    weight: "",
+    height: "",
+    bloodOxygen: ""
   });
 
   const [consultation, setConsultation] = useState({
@@ -159,6 +161,14 @@ export function ConsultationScreen({
       weight:
         currentConsultation.Weight != null
           ? String(currentConsultation.Weight)
+          : "",
+      height:
+        currentConsultation.Height != null
+          ? String(currentConsultation.Height)
+          : "",
+      bloodOxygen:
+        currentConsultation.BloodOxygen != null
+          ? String(currentConsultation.BloodOxygen)
           : ""
     });
 
@@ -209,18 +219,24 @@ export function ConsultationScreen({
 
     const payload = {
       appointmentID: appointmentId,
-      heartRate: vitals.heartRate ? Number(vitals.heartRate) : null,
+      heartRate: vitals.heartRate
+        ? Number(vitals.heartRate)
+        : currentConsultation?.HeartRate ?? null,
       respiratoryRate: currentConsultation?.RespiratoryRate ?? null,
       temperature: vitals.temperature
         ? Number(vitals.temperature)
         : currentConsultation?.Temperature ?? null,
-      bloodOxygen: currentConsultation?.BloodOxygen ?? null,
+      bloodOxygen: vitals.bloodOxygen
+        ? Number(vitals.bloodOxygen)
+        : currentConsultation?.BloodOxygen ?? null,
       systolicBP,
       diastolicBP,
       weight: vitals.weight
         ? Number(vitals.weight)
         : currentConsultation?.Weight ?? null,
-      height: currentConsultation?.Height ?? null,
+      height: vitals.height
+        ? Number(vitals.height)
+        : currentConsultation?.Height ?? null,
       chiefComplaints: consultation.chiefComplaint,
       diagnosis: consultation.diagnosis,
       procedures: selectedProcedures.map((p) => p.procedureId)
@@ -359,6 +375,60 @@ export function ConsultationScreen({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label
+                    htmlFor="weight"
+                    className="flex items-center text-slate-700">
+                    <Weight className="mr-2 h-4 w-4 text-blue-500" />
+                    Weight (kg)
+                  </Label>
+                  <Input
+                    id="weight"
+                    placeholder="70"
+                    type="number"
+                    value={vitals.weight}
+                    onChange={(e) =>
+                      setVitals({ ...vitals, weight: e.target.value })
+                    }
+                    disabled={disableEditing}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="height"
+                    className="flex items-center text-slate-700">
+                    <Weight className="mr-2 h-4 w-4 text-blue-500" />
+                    Height (cm)
+                  </Label>
+                  <Input
+                    id="height"
+                    placeholder="160"
+                    type="number"
+                    value={vitals.height}
+                    onChange={(e) =>
+                      setVitals({ ...vitals, height: e.target.value })
+                    }
+                    disabled={disableEditing}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="temp"
+                    className="flex items-center text-slate-700">
+                    <Thermometer className="mr-2 h-4 w-4 text-orange-500" />
+                    Temperature (°F)
+                  </Label>
+                  <Input
+                    id="temp"
+                    placeholder="98.6"
+                    type="number"
+                    value={vitals.temperature}
+                    onChange={(e) =>
+                      setVitals({ ...vitals, temperature: e.target.value })
+                    }
+                    disabled={disableEditing}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
                     htmlFor="bp"
                     className="flex items-center text-slate-700">
                     <Activity className="mr-2 h-4 w-4 text-red-500" />
@@ -394,36 +464,18 @@ export function ConsultationScreen({
                 </div>
                 <div className="space-y-2">
                   <Label
-                    htmlFor="temp"
+                    htmlFor="spo2"
                     className="flex items-center text-slate-700">
-                    <Thermometer className="mr-2 h-4 w-4 text-orange-500" />
-                    Temperature (°F)
+                    <Heart className="mr-2 h-4 w-4 text-pink-500" />
+                    SpO2 (%)
                   </Label>
                   <Input
-                    id="temp"
-                    placeholder="98.6"
+                    id="spo2"
+                    placeholder="90"
                     type="number"
-                    value={vitals.temperature}
+                    value={vitals.bloodOxygen}
                     onChange={(e) =>
-                      setVitals({ ...vitals, temperature: e.target.value })
-                    }
-                    disabled={disableEditing}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="weight"
-                    className="flex items-center text-slate-700">
-                    <Weight className="mr-2 h-4 w-4 text-blue-500" />
-                    Weight (kg)
-                  </Label>
-                  <Input
-                    id="weight"
-                    placeholder="70"
-                    type="number"
-                    value={vitals.weight}
-                    onChange={(e) =>
-                      setVitals({ ...vitals, weight: e.target.value })
+                      setVitals({ ...vitals, bloodOxygen: e.target.value })
                     }
                     disabled={disableEditing}
                   />

@@ -128,13 +128,12 @@ export default async function handler(
       diagnosis: diagnosis || "None",
       patient_id: `P${patientId}`,
       date: new Date(date).toLocaleString(),
-      temperature: Temperature ? `${Temperature} F` : "NA",
       weight: Weight ? `${Weight}kg` : "NA",
       height: Height ? `${Height}cm` : "NA",
+      temperature: Temperature ? `${Temperature} F` : "NA",
       bp: SystolicBP && DiastolicBP ? `${SystolicBP}/${DiastolicBP}` : "NA",
-      spo2: BloodOxygen ? `${BloodOxygen}` : "NA",
       heart_rate: HeartRate ? `${HeartRate}bpm` : "NA",
-      respiratory_rate: RespiratoryRate ? `${RespiratoryRate}` : "NA",
+      spo2: BloodOxygen ? `${BloodOxygen}%` : "NA",
       procedures:
         procedureRows.length > 0
           ? procedureRows
