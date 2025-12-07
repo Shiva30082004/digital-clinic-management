@@ -30,6 +30,7 @@ import { getFirebaseAuth } from "@/utils/firebase";
 import { signOut } from "firebase/auth";
 import useApiCall from "@/hooks/useApiCall";
 import Appointment from "@/types/Appointment";
+import Document from "@/types/Document";
 
 export default function App() {
   const router = useRouter();
@@ -102,6 +103,38 @@ export default function App() {
 
   const { invokeRequest: invokeChangeAppointmentStatus } = useApiCall();
 
+  const {
+    isSuccess: isPrescriptionGenerated = false,
+    data: prescription = "",
+    refetch: regeneratePrescription
+  } = useApiCall<Document>({
+    request: {
+      endpoint: "/api/document/generate",
+      params: { appointmentId: selectedAppointment?.appointmentID || "" },
+      method: "GET"
+    },
+    fetchOnMount:
+      !!selectedAppointment && selectedAppointment?.appointmentStatus === "COM"
+  });
+
+  const openPDFInNewWindow = async (data: Document) => {
+    const byteCharacters = atob(data);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const file = new Blob([byteArray], { type: "application/pdf;base64" });
+    const fileURL = URL.createObjectURL(file);
+    window.open(fileURL);
+  };
+
+  useEffect(() => {
+    if (isPrescriptionGenerated && prescription) {
+      openPDFInNewWindow(prescription);
+    }
+  }, [isPrescriptionGenerated, prescription]);
+
   // Show loading or nothing while checking auth
   if (isLoading) {
     return (
@@ -129,14 +162,22 @@ export default function App() {
           payload: { appointmentStatus: "ACT" },
           method: "PATCH"
         });
+        setSelectedAppointment(appointment);
+        setCurrentScreen("consultation");
         break;
       case "ACT":
+        setSelectedAppointment(appointment);
+        setCurrentScreen("consultation");
+        break;
       case "COM":
+        if (appointment?.appointmentID === selectedAppointment?.appointmentID) {
+          regeneratePrescription();
+        }
+        setSelectedAppointment(appointment);
+        break;
       case "CAN":
       default:
     }
-    setSelectedAppointment(appointment);
-    setCurrentScreen("consultation");
   };
 
   const onPatientSelect = (patientId: string) => {

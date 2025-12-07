@@ -93,14 +93,12 @@
       <div class="clinic-info">
         <h2>{{clinic_name}}</h2>
         <div>{{clinic_address}}</div>
-        <div>{{clinic_phone}}</div>
       </div>
 
       <div class="doctor-info">
         <h2>{{doctor_name}}</h2>
         <div>{{specialization}}</div>
         <div>{{doctor_email}}</div>
-        <div>{{doctor_phone}}</div>
       </div>
     </div>
 
@@ -116,7 +114,6 @@
         <div>
           <div><strong>Patient ID:</strong> {{patient_id}}</div>
           <div><strong>Date:</strong> {{date}}</div>
-          <div><strong>Phone:</strong> {{patient_phone}}</div>
         </div>
       </div>
     </div>
@@ -142,11 +139,12 @@
       <div class="two-col">
         <div>
           <div><strong>BP:</strong> {{bp}}</div>
-          <div><strong>Pulse:</strong> {{pulse}}</div>
-          <div><strong>Temperature:</strong> {{temperature}}</div>
+          <div><strong>Heart Rate:</strong> {{heart_rate}}</div>
+          <div><strong>SpO2:</strong> {{spo2}}</div>
+          <div><strong>Respiratory Rate:</strong> {{respiratory_rate}}</div>
         </div>
         <div>
-          <div><strong>SpO2:</strong> {{spo2}}</div>
+          <div><strong>Temperature:</strong> {{temperature}}</div>
           <div><strong>Weight:</strong> {{weight}}</div>
           <div><strong>Height:</strong> {{height}}</div>
         </div>
@@ -171,10 +169,6 @@
         </thead>
         <tbody>
           {{invoice_items}}
-          <tr>
-            <td><strong>Total</strong></td>
-            <td><strong>{{invoice_total}}</strong></td>
-          </tr>
         </tbody>
       </table>
     </div>

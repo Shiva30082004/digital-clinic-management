@@ -25,7 +25,7 @@ export default async function handler(
   if (req.method === "GET") {
     const doctorId = req.headers[DOCTOR_ID_HEADER_KEY] as string;
     const clinicId = req.headers[CLINIC_ID_HEADER_KEY] as string;
-    const { appointmentId = "" } = req.body;
+    const { appointmentId = "" } = req.query;
 
     if (!appointmentId) {
       return res.status(400).json({
@@ -38,7 +38,7 @@ export default async function handler(
     if (!conn) return res.status(500).end();
 
     const appointmentQuery =
-      "SELECT CONCAT(d.firstName, ' ', d.lastName) AS doctor_name, d.emailAddress AS doctor_email, specialization, consultationFees, clinicName AS clinic_name, zipcode AS clinic_address, CONCAT(p.firstName, ' ', p.lastName) AS patient_name, TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE()) AS patient_age, gender AS patient_gender FROM Appointments NATURAL JOIN Doctors d NATURAL JOIN Patients p NATURAL JOIN Clinics WHERE appointmentId = ? AND doctorId = ? AND clinicId = ?";
+      "SELECT a.startTime AS date, a.patientId AS patientId, CONCAT(d.firstName, ' ', d.lastName) AS doctor_name, d.emailAddress AS doctor_email, specialization, consultationFees, clinicName AS clinic_name, zipcode AS clinic_address, CONCAT(p.firstName, ' ', p.lastName) AS patient_name, TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE()) AS patient_age, gender AS patient_gender FROM Appointments a NATURAL JOIN Doctors d NATURAL JOIN Clinics c JOIN Patients p ON p.PatientID = a.PatientID WHERE appointmentId = ? AND doctorId = ? AND c.clinicId = ?";
     const appointmentValues = [appointmentId, doctorId, clinicId];
 
     const [appointments] = await conn.execute<
@@ -52,6 +52,8 @@ export default async function handler(
 
     const [
       {
+        date = "",
+        patientId = "",
         doctor_name = "",
         doctor_email = "",
         specialization = "",
@@ -101,7 +103,7 @@ export default async function handler(
 
     const vitals = [];
 
-    if (temperature) vitals.push(`Temperature: ${temperature} C`);
+    if (temperature) vitals.push(`Temperature: ${temperature} F`);
     if (weight) vitals.push(`Weight: ${weight}kg`);
     if (height) vitals.push(`Height: ${height}cm`);
     if (systolicBP && diastolicBP)
@@ -121,7 +123,15 @@ export default async function handler(
       patient_gender,
       chief_complaints,
       diagnosis,
-      vitals: vitals.join(", "),
+      patient_id: `P${patientId}`,
+      date: new Date(date).toLocaleString(),
+      temperature: temperature ? `${temperature} F` : "NA",
+      weight: temperature ? `${weight}kg` : "NA",
+      height: temperature ? `${height}cm` : "NA",
+      bp: systolicBP && diastolicBP ? `${systolicBP}/${diastolicBP}` : "NA",
+      spo2: bloodOxygen ? `${bloodOxygen}` : "NA",
+      heart_rate: heartRate ? `${heartRate}bpm` : "NA",
+      respiratory_rate: respiratoryRate ? `${respiratoryRate}` : "NA",
       procedures: procedureRows
         .map((procedure) => procedure.procedureName || "")
         .join(", "),
@@ -135,8 +145,17 @@ export default async function handler(
               }</td></tr>`
           )
           .join("\n")}
+        ${
+          invoice_total
+            ? `<tr>
+            <td><strong>Total</strong></td>
+            <td><strong>${invoice_total}</strong></td>
+          </tr>`
+            : ""
+        }
     `,
-      invoice_total
+      generated_by: "DigiClinic",
+      generated_at: new Date().toLocaleString()
     };
 
     let template = baseTemplate;
@@ -166,9 +185,7 @@ export default async function handler(
     await browser.close();
 
     return res.status(200).json({
-      data: `data:application/pdf;base64,${
-        Buffer.from(pdfBuffer).toString("base64") || ""
-      }`
+      data: Buffer.from(pdfBuffer).toString("base64") || ""
     });
   } else {
     return res.status(405).end();
