@@ -78,9 +78,12 @@ export function PatientProfile({
   const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [newAppointment, setNewAppointment] = useState({
-    date: "",
-    startTime: "",
-    endTime: "",
+    date: new Date().toISOString().split("T")[0],
+    startTime: new Date().toISOString().split("T")[1].substring(0, 5),
+    endTime: new Date(Date.now() + 15 * 60 * 1000)
+      .toISOString()
+      .split("T")[1]
+      .substring(0, 5),
     status: "Booked"
   });
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -182,9 +185,12 @@ export function PatientProfile({
     });
     setShowNewAppointment(false);
     setNewAppointment({
-      date: "",
-      startTime: "",
-      endTime: "",
+      date: new Date().toISOString().split("T")[0],
+      startTime: new Date().toISOString().split("T")[1].substring(0, 5),
+      endTime: new Date(Date.now() + 15 * 60 * 1000)
+        .toISOString()
+        .split("T")[1]
+        .substring(0, 5),
       status: "Booked"
     });
   };

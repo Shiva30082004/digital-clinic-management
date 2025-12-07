@@ -112,9 +112,12 @@ export function DoctorDashboard({ onStartConsultation, doctorInfo }) {
   const lastFetchedDateRef = useRef<string>(""); // Use ref instead of state for persistence
   const [newAppointment, setNewAppointment] = useState({
     patientId: "",
-    date: "",
-    startTime: "",
-    endTime: ""
+    date: new Date().toISOString().split("T")[0],
+    startTime: new Date().toISOString().split("T")[1].substring(0, 5),
+    endTime: new Date(Date.now() + 15 * 60 * 1000)
+      .toISOString()
+      .split("T")[1]
+      .substring(0, 5)
   });
   const [appointmentError, setAppointmentError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -310,9 +313,12 @@ export function DoctorDashboard({ onStartConsultation, doctorInfo }) {
       setIsNewAppointmentOpen(false);
       setNewAppointment({
         patientId: "",
-        date: "",
-        startTime: "",
-        endTime: ""
+        date: new Date().toISOString().split("T")[0],
+        startTime: new Date().toISOString().split("T")[1].substring(0, 5),
+        endTime: new Date(Date.now() + 15 * 60 * 1000)
+          .toISOString()
+          .split("T")[1]
+          .substring(0, 5)
       });
     } catch (error) {
       console.error("Failed to create appointment:", error);
@@ -435,7 +441,9 @@ export function DoctorDashboard({ onStartConsultation, doctorInfo }) {
 
                 // Check if this appointment can be viewed/edited by current doctor
                 const canViewAppointment =
-                  (!isAdmin || isOwnAppointment(appointment) || (isAdmin && appointment?.appointmentStatus === "COM")) &&
+                  (!isAdmin ||
+                    isOwnAppointment(appointment) ||
+                    (isAdmin && appointment?.appointmentStatus === "COM")) &&
                   appointment?.appointmentStatus !== "CAN";
 
                 return (
@@ -867,9 +875,13 @@ export function DoctorDashboard({ onStartConsultation, doctorInfo }) {
                 id="date"
                 type="date"
                 value={newAppointment.date}
-                onChange={(e) =>
-                  setNewAppointment({ ...newAppointment, date: e.target.value })
-                }
+                onChange={(e) => {
+                  setNewAppointment({
+                    ...newAppointment,
+                    date: e.target.value
+                  });
+                  console.log(e.target.value, new Date().toISOString());
+                }}
               />
             </div>
 
