@@ -154,7 +154,7 @@ export default function SignupPage() {
           emailAddress: consultantSignup.email,
           role: "consultant",
           specialization: consultantSignup.specialization,
-          clinicID: consultantSignup.clinicId,
+          clinicId: consultantSignup.clinicId,
           consultationFees: consultantSignup.consultationFees
         },
         method: "POST"
@@ -207,7 +207,7 @@ export default function SignupPage() {
             Create Doctor Account
           </h1>
           <p className="text-slate-600 mt-2">
-            Sign up to get started with Clinic Management
+            Sign up to get started with Digital Clinic Management
           </p>
         </div>
 

@@ -1,4 +1,8 @@
-import { CLINIC_ID_HEADER_KEY, DOCTOR_ID_HEADER_KEY } from "@/constants/auth";
+import {
+  CLINIC_ID_HEADER_KEY,
+  DOCTOR_ID_HEADER_KEY,
+  ROLE_HEADER_KEY
+} from "@/constants/auth";
 import puppeteer from "puppeteer";
 import ApiResponse from "@/types/ApiResponse";
 import Document from "@/types/Document";
@@ -25,6 +29,7 @@ export default async function handler(
   if (req.method === "GET") {
     const doctorId = req.headers[DOCTOR_ID_HEADER_KEY] as string;
     const clinicId = req.headers[CLINIC_ID_HEADER_KEY] as string;
+    const role = req.headers[ROLE_HEADER_KEY] as string;
     const { appointmentId = "" } = req.query;
 
     if (!appointmentId) {
@@ -37,9 +42,18 @@ export default async function handler(
 
     if (!conn) return res.status(500).end();
 
-    const appointmentQuery =
-      "SELECT a.startTime AS date, a.patientId AS patientId, CONCAT(d.firstName, ' ', d.lastName) AS doctor_name, d.emailAddress AS doctor_email, specialization, consultationFees, clinicName AS clinic_name, zipcode AS clinic_address, CONCAT(p.firstName, ' ', p.lastName) AS patient_name, TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE()) AS patient_age, gender AS patient_gender FROM Appointments a NATURAL JOIN Doctors d NATURAL JOIN Clinics c JOIN Patients p ON p.PatientID = a.PatientID WHERE appointmentId = ? AND doctorId = ? AND c.clinicId = ?";
-    const appointmentValues = [appointmentId, doctorId, clinicId];
+    let appointmentQuery = "";
+    let appointmentValues: any[] = [];
+
+    if (role === "admin") {
+      appointmentQuery =
+        "SELECT a.startTime AS date, a.patientId AS patientId, CONCAT(d.firstName, ' ', d.lastName) AS doctor_name, d.emailAddress AS doctor_email, specialization, consultationFees, clinicName AS clinic_name, zipcode AS clinic_address, CONCAT(p.firstName, ' ', p.lastName) AS patient_name, TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE()) AS patient_age, gender AS patient_gender FROM Appointments a NATURAL JOIN Doctors d NATURAL JOIN Clinics c JOIN Patients p ON p.PatientID = a.PatientID WHERE appointmentId = ? AND c.clinicId = ?";
+      appointmentValues = [appointmentId, clinicId];
+    } else {
+      appointmentQuery =
+        "SELECT a.startTime AS date, a.patientId AS patientId, CONCAT(d.firstName, ' ', d.lastName) AS doctor_name, d.emailAddress AS doctor_email, specialization, consultationFees, clinicName AS clinic_name, zipcode AS clinic_address, CONCAT(p.firstName, ' ', p.lastName) AS patient_name, TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE()) AS patient_age, gender AS patient_gender FROM Appointments a NATURAL JOIN Doctors d NATURAL JOIN Clinics c JOIN Patients p ON p.PatientID = a.PatientID WHERE appointmentId = ? AND doctorId = ? AND c.clinicId = ?";
+      appointmentValues = [appointmentId, doctorId, clinicId];
+    }
 
     const [appointments] = await conn.execute<
       (Appointment & Doctor & Patient & Clinic)[]
@@ -73,18 +87,18 @@ export default async function handler(
     const [
       [
         {
-          consultationID: consultationId = "",
-          heartRate = "",
-          respiratoryRate = "",
-          temperature = "",
-          bloodOxygen = "",
-          systolicBP = "",
-          diastolicBP = "",
-          weight = "",
-          height = "",
-          chiefComplaints: chief_complaints = "",
-          diagnosis = "",
-          amount: invoice_total = 0
+          ConsultationID: consultationId = "",
+          HeartRate = "",
+          RespiratoryRate = "",
+          Temperature = "",
+          BloodOxygen = "",
+          SystolicBP = "",
+          DiastolicBP = "",
+          Weight = "",
+          Height = "",
+          ChiefComplaints: chief_complaints = "",
+          Diagnosis: diagnosis = "",
+          Amount: invoice_total = 0
         } = {}
       ]
     ] = await conn.execute<(Consultation & Invoice)[]>(
@@ -101,17 +115,6 @@ export default async function handler(
       proceduresValues
     );
 
-    const vitals = [];
-
-    if (temperature) vitals.push(`Temperature: ${temperature} F`);
-    if (weight) vitals.push(`Weight: ${weight}kg`);
-    if (height) vitals.push(`Height: ${height}cm`);
-    if (systolicBP && diastolicBP)
-      vitals.push(`BP: ${systolicBP}/${diastolicBP}`);
-    if (bloodOxygen) vitals.push(`SpO2: ${bloodOxygen}`);
-    if (heartRate) vitals.push(`Heart Rate: ${heartRate}bpm`);
-    if (respiratoryRate) vitals.push(`Respiratory Rate: ${respiratoryRate}`);
-
     const data = {
       doctor_name,
       doctor_email,
@@ -125,13 +128,13 @@ export default async function handler(
       diagnosis,
       patient_id: `P${patientId}`,
       date: new Date(date).toLocaleString(),
-      temperature: temperature ? `${temperature} F` : "NA",
-      weight: temperature ? `${weight}kg` : "NA",
-      height: temperature ? `${height}cm` : "NA",
-      bp: systolicBP && diastolicBP ? `${systolicBP}/${diastolicBP}` : "NA",
-      spo2: bloodOxygen ? `${bloodOxygen}` : "NA",
-      heart_rate: heartRate ? `${heartRate}bpm` : "NA",
-      respiratory_rate: respiratoryRate ? `${respiratoryRate}` : "NA",
+      temperature: Temperature ? `${Temperature} F` : "NA",
+      weight: Weight ? `${Weight}kg` : "NA",
+      height: Height ? `${Height}cm` : "NA",
+      bp: SystolicBP && DiastolicBP ? `${SystolicBP}/${DiastolicBP}` : "NA",
+      spo2: BloodOxygen ? `${BloodOxygen}` : "NA",
+      heart_rate: HeartRate ? `${HeartRate}bpm` : "NA",
+      respiratory_rate: RespiratoryRate ? `${RespiratoryRate}` : "NA",
       procedures: procedureRows
         .map((procedure) => procedure.procedureName || "")
         .join(", "),
@@ -140,7 +143,7 @@ export default async function handler(
         ${procedureRows
           .map(
             (procedure) =>
-              `<tr><td>${procedure.procedureName || ""}</td><td>${
+              `<tr><td>${procedure.procedureName || ""}</td><td>$${
                 procedure.amount || 0
               }</td></tr>`
           )
@@ -149,7 +152,7 @@ export default async function handler(
           invoice_total
             ? `<tr>
             <td><strong>Total</strong></td>
-            <td><strong>${invoice_total}</strong></td>
+            <td><strong>$${invoice_total}</strong></td>
           </tr>`
             : ""
         }

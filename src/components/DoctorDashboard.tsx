@@ -435,7 +435,7 @@ export function DoctorDashboard({ onStartConsultation, doctorInfo }) {
 
                 // Check if this appointment can be viewed/edited by current doctor
                 const canViewAppointment =
-                  (!isAdmin || isOwnAppointment(appointment)) &&
+                  (!isAdmin || isOwnAppointment(appointment) || (isAdmin && appointment?.appointmentStatus === "COM")) &&
                   appointment?.appointmentStatus !== "CAN";
 
                 return (

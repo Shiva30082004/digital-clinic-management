@@ -1,12 +1,5 @@
 import React, { useState } from "react";
-import {
-  Search,
-  Plus,
-  Mail,
-  Calendar,
-  User,
-  ChevronRight,
-} from "lucide-react";
+import { Search, Plus, Mail, Calendar, User, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -34,8 +27,9 @@ import { debounce } from "lodash";
 import { CLINIC_ID_HEADER_KEY } from "@/constants/auth";
 import Patient from "@/types/Patient";
 
-
-export function PatientList({ onPatientSelect }: {
+export function PatientList({
+  onPatientSelect
+}: {
   onPatientSelect: (id: number) => void;
 }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -59,7 +53,6 @@ export function PatientList({ onPatientSelect }: {
     },
     fetchOnMount: true
   });
-
 
   const handleAddPatient = async () => {
     try {
@@ -88,7 +81,7 @@ export function PatientList({ onPatientSelect }: {
       refetch();
     } catch (err) {
       console.error("Error creating patient", err);
-      alert("Error creating patient");
+      // alert("Error creating patient");
     }
   };
 
@@ -182,7 +175,7 @@ export function PatientList({ onPatientSelect }: {
                     }}>
                     View Profile
                   </Button>
-                  <Button
+                  {/* <Button
                     variant="ghost"
                     size="icon"
                     className="h-9 w-9"
@@ -191,7 +184,7 @@ export function PatientList({ onPatientSelect }: {
                       // Handle appointment booking
                     }}>
                     <Calendar className="h-4 w-4" />
-                  </Button>
+                  </Button> */}
                 </div>
               </div>
             </CardContent>
@@ -289,10 +282,10 @@ export function PatientList({ onPatientSelect }: {
                   <SelectTrigger>
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="M">Male</SelectItem>
-                      <SelectItem value="F">Female</SelectItem>
-                    </SelectContent>
+                  <SelectContent>
+                    <SelectItem value="M">Male</SelectItem>
+                    <SelectItem value="F">Female</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
             </div>

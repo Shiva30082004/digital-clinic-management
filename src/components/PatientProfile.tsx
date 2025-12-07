@@ -88,7 +88,8 @@ export function PatientProfile({
     firstName: "",
     lastName: "",
     emailAddress: "",
-    dateOfBirth: ""
+    dateOfBirth: "",
+    gender: ""
   });
 
   const isOwnAppointment = (appointment: any) => {
@@ -151,13 +152,71 @@ export function PatientProfile({
     }
   };
 
-  const { isLoading = false, data: patient = {} } = useApiCall({
+  const handleScheduleAppointment = async () => {
+    const startDateTime = `${newAppointment.date}T${newAppointment.startTime}:00`;
+    const endDateTime = `${newAppointment.date}T${newAppointment.endTime}:00`;
+
+    // Call API to create appointment
+    await updateAppointmentRequest({
+      endpoint: "/api/appointments",
+      method: "POST",
+      payload: {
+        patientID: patientId,
+        appointmentStatus: "BKD", // Always "Booked" for new appointments
+        startTime: startDateTime,
+        endTime: endDateTime
+      }
+    });
+
+    console.log("Appointment created successfully:", newAppointment);
+
+    // Small delay to ensure database write completes
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Force refetch of current date
+    refetchAppointments();
+
+    console.log("New appointment:", {
+      patientName: patientName,
+      ...newAppointment
+    });
+    setShowNewAppointment(false);
+    setNewAppointment({
+      date: "",
+      startTime: "",
+      endTime: "",
+      status: "Booked"
+    });
+  };
+
+  const handleDeleteAppointment = async (appointmentId: number) => {
+    try {
+      await updateAppointmentRequest({
+        endpoint: `/api/appointments`,
+        method: "DELETE",
+        params: { id: appointmentId }
+      });
+      console.log("Appointment deleted successfully:", appointmentId);
+      // Refresh appointments list
+      refetchAppointments();
+    } catch (error) {
+      console.error("Failed to delete appointment:", error);
+    }
+  };
+
+  const {
+    isLoading = false,
+    data: patient = {},
+    refetch
+  } = useApiCall({
     request: {
       endpoint: "/api/patient",
       params: { id: patientId }
     },
     fetchOnMount: true
   });
+
+  const { invokeRequest } = useApiCall();
 
   const { data: invoices = [] } = useApiCall({
     request: {
@@ -185,10 +244,10 @@ export function PatientProfile({
     );
   }
   if (!patient || !patient.patientId) {
-   return (
-     <div className="flex items-center justify-center h-64">
-          <div className="text-slate-500">Patient not found.</div>
-     </div>
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-slate-500">Patient not found.</div>
+      </div>
     );
   }
   // Initialize edit form when modal opens
@@ -203,7 +262,8 @@ export function PatientProfile({
       firstName: patient.firstName || "",
       lastName: patient.lastName || "",
       emailAddress: patient.emailAddress || "",
-      dateOfBirth: dobValue
+      dateOfBirth: dobValue,
+      gender: patient.gender || "M"
     });
 
     setShowEditProfile(true);
@@ -219,7 +279,8 @@ export function PatientProfile({
           firstName: editedPatient.firstName,
           lastName: editedPatient.lastName,
           emailAddress: editedPatient.emailAddress,
-          dateOfBirth: editedPatient.dateOfBirth
+          dateOfBirth: editedPatient.dateOfBirth,
+          gender: editedPatient.gender
         }
       });
 
@@ -229,10 +290,9 @@ export function PatientProfile({
       refetch();
     } catch (err) {
       console.error("Error updating patient", err);
-      alert("Failed to update patient");
+      // alert("Failed to update patient");
     }
   };
-
 
   const handleDeletePatient = async () => {
     if (!confirm("Are you sure you want to delete this patient?")) return;
@@ -244,15 +304,13 @@ export function PatientProfile({
         params: { id: patientId }
       });
 
-      alert("Patient deleted successfully");
+      // alert("Patient deleted successfully");
       onBack();
     } catch (err) {
       console.error("Error deleting patient", err);
-      alert("Failed to delete patient");
+      // alert("Failed to delete patient");
     }
   };
-
-
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -389,28 +447,6 @@ export function PatientProfile({
                 </div>
               </div>
 
-              {/* Appointment Status */}
-              <div className="space-y-2">
-                <Label htmlFor="appointmentStatus" className="text-slate-700">
-                  Appointment Status
-                </Label>
-                <select
-                  id="appointmentStatus"
-                  value={newAppointment.status}
-                  onChange={(e) =>
-                    setNewAppointment({
-                      ...newAppointment,
-                      status: e.target.value
-                    })
-                  }
-                  className="w-full h-10 px-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="Booked">Booked</option>
-                  <option value="Active">Active</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
-              </div>
-
               <Separator />
 
               <div className="flex justify-end space-x-2">
@@ -429,21 +465,7 @@ export function PatientProfile({
                 </Button>
                 <Button
                   className="bg-blue-600 hover:bg-blue-700"
-                  onClick={() => {
-                    // TODO: BACKEND INTEGRATION - Save appointment to database
-                    // Example: await fetch('/api/appointments', { method: 'POST', body: JSON.stringify({ patientId: patient.id, ...newAppointment }) });
-                    console.log("New appointment:", {
-                      patientName: patientName,
-                      ...newAppointment
-                    });
-                    setShowNewAppointment(false);
-                    setNewAppointment({
-                      date: "",
-                      startTime: "",
-                      endTime: "",
-                      status: "Booked"
-                    });
-                  }}>
+                  onClick={() => handleScheduleAppointment()}>
                   <Calendar className="mr-2 h-4 w-4" />
                   Schedule Appointment
                 </Button>
@@ -544,7 +566,7 @@ export function PatientProfile({
                 />
               </div>
 
-              {/* Date of Birth and Blood Group */}
+              {/* Date of Birth and Gender */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label
@@ -567,6 +589,27 @@ export function PatientProfile({
                   />
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="gender"
+                  className="flex items-center text-slate-700">
+                  <Activity className="mr-2 h-4 w-4 text-blue-500" />
+                  Gender
+                </Label>
+                <select
+                  id="gender"
+                  value={editedPatient.gender}
+                  onChange={(e) =>
+                    setEditedPatient({
+                      ...editedPatient,
+                      gender: e.target.value
+                    })
+                  }
+                  className="w-full h-10 px-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="M">Male</option>
+                  <option value="F">Female</option>
+                </select>
+              </div>
 
               <Separator />
 
@@ -579,7 +622,8 @@ export function PatientProfile({
                       firstName: "",
                       lastName: "",
                       emailAddress: "",
-                      dateOfBirth: ""
+                      dateOfBirth: "",
+                      gender: ""
                     });
                   }}>
                   Cancel
@@ -590,7 +634,6 @@ export function PatientProfile({
                   <Save className="mr-2 h-4 w-4" />
                   Save Changes
                 </Button>
-
               </div>
             </div>
           </CardContent>
@@ -639,14 +682,10 @@ export function PatientProfile({
                 Edit Profile
               </Button>
 
-              <Button
-                variant="destructive"
-                onClick={handleDeletePatient}
-              >
+              <Button variant="destructive" onClick={handleDeletePatient}>
                 Delete
               </Button>
             </div>
-
           </div>
         </CardContent>
       </Card>
@@ -705,7 +744,10 @@ export function PatientProfile({
                     });
 
                     const canViewAppointment =
-                      (!isAdmin || isOwnAppointment(appointment)) &&
+                      (!isAdmin ||
+                        isOwnAppointment(appointment) ||
+                        (isAdmin &&
+                          appointment?.appointmentStatus === "COM")) &&
                       appointment?.appointmentStatus !== "CAN";
 
                     return (
@@ -778,65 +820,71 @@ export function PatientProfile({
                               }>
                               <MoreVertical className="h-4 w-4" />
                             </Button>
-                            {openMenuId === appointment.appointmentID && (
-                              <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
-                                <div className="py-1" role="menu">
-                                  <button
-                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                    onClick={() => {
-                                      onStartConsultation(appointment);
-                                      setOpenMenuId(null);
-                                    }}>
-                                    Start Consultation
-                                  </button>
-                                  <div className="border-t border-gray-100"></div>
-                                  <button
-                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                    onClick={() => {
-                                      handleUpdateStatus(
-                                        appointment.appointmentID,
-                                        "Booked"
-                                      );
-                                      setOpenMenuId(null);
-                                    }}>
-                                    Mark as Booked
-                                  </button>
-                                  <button
-                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                    onClick={() => {
-                                      handleUpdateStatus(
-                                        appointment.appointmentID,
-                                        "Active"
-                                      );
-                                      setOpenMenuId(null);
-                                    }}>
-                                    Mark as Active
-                                  </button>
-                                  <button
-                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                    onClick={() => {
-                                      handleUpdateStatus(
-                                        appointment.appointmentID,
-                                        "Completed"
-                                      );
-                                      setOpenMenuId(null);
-                                    }}>
-                                    Mark as Completed
-                                  </button>
-                                  <button
-                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                    onClick={() => {
-                                      handleUpdateStatus(
-                                        appointment.appointmentID,
-                                        "Cancelled"
-                                      );
-                                      setOpenMenuId(null);
-                                    }}>
-                                    Mark as Cancelled
-                                  </button>
+                            {openMenuId === appointment.appointmentID &&
+                              canViewAppointment && (
+                                <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                                  <div className="py-1" role="menu">
+                                    {["BKD"].includes(
+                                      appointment?.appointmentStatus
+                                    ) && (
+                                      <>
+                                        <button
+                                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                          onClick={() => {
+                                            onStartConsultation(appointment);
+                                            setOpenMenuId(null);
+                                          }}>
+                                          Start Consultation
+                                        </button>
+                                        <div className="border-t border-gray-100"></div>
+                                      </>
+                                    )}
+                                    {["ACT"].includes(
+                                      appointment?.appointmentStatus
+                                    ) && (
+                                      <button
+                                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                        onClick={() => {
+                                          handleUpdateStatus(
+                                            appointment.appointmentID,
+                                            "Completed"
+                                          );
+                                          setOpenMenuId(null);
+                                        }}>
+                                        Mark as Completed
+                                      </button>
+                                    )}
+                                    {!["CAN", "COM"].includes(
+                                      appointment?.appointmentStatus
+                                    ) && (
+                                      <>
+                                        <button
+                                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                          onClick={() => {
+                                            handleUpdateStatus(
+                                              appointment.appointmentID,
+                                              "Cancelled"
+                                            );
+                                            setOpenMenuId(null);
+                                          }}>
+                                          Mark as Cancelled
+                                        </button>
+                                        <div className="border-t border-gray-100"></div>
+                                      </>
+                                    )}
+                                    <button
+                                      className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                                      onClick={() => {
+                                        handleDeleteAppointment(
+                                          appointment.appointmentID
+                                        );
+                                        setOpenMenuId(null);
+                                      }}>
+                                      Delete Appointment
+                                    </button>
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              )}
                           </div>
                         </div>
                       </div>
@@ -960,7 +1008,10 @@ export function PatientProfile({
                               variant="ghost"
                               size="icon"
                               onClick={() =>
-                                onStartConsultation(invoice.AppointmentID)
+                                onStartConsultation({
+                                  appointmentID: invoice.AppointmentID,
+                                  appointmentStatus: "COM"
+                                })
                               }>
                               <Eye className="h-4 w-4" />
                             </Button>

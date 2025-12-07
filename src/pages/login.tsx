@@ -94,7 +94,7 @@ export default function LoginPage() {
             </div>
           </div>
           <h1 className="text-3xl font-bold text-slate-900">
-            Clinic Management
+            DigiClinic
           </h1>
           <p className="text-slate-600 mt-2">
             Sign in to access your dashboard
