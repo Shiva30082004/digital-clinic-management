@@ -25,6 +25,10 @@ const useApiCall = <Response>({
 
   const invokeRequest = async (
     request: RequestOptions,
+    mutateOptions?: {
+      onSuccess?: (response: Response) => void;
+      onError?: (error: string) => void;
+    },
     disableLoading = false
   ) => {
     if (isApiInProgressRef.current) return;
@@ -47,6 +51,8 @@ const useApiCall = <Response>({
       validateStatus: () => true
     });
 
+    const { onSuccess = undefined, onError = undefined } = mutateOptions || {};
+
     apiClient.interceptors.response.use((response) => {
       const { data: _data = {}, error: _error = "" } = response?.data || {};
 
@@ -62,7 +68,13 @@ const useApiCall = <Response>({
       setIsLoading(false);
       isApiInProgressRef.current = false;
 
-      return err ? Promise.reject(_error) : Promise.resolve(_data);
+      if (err) {
+        onError?.(_error);
+        Promise.reject(_error);
+      } else {
+        onSuccess?.(_data);
+        return Promise.resolve(_data);
+      }
     });
 
     try {
@@ -82,6 +94,11 @@ const useApiCall = <Response>({
             params
           });
           break;
+        case "PATCH":
+          await apiClient.patch(endpoint, payload, {
+            params
+          });
+          break;
         case "DELETE":
           await apiClient.delete(endpoint, {
             params
@@ -97,7 +114,7 @@ const useApiCall = <Response>({
   };
 
   const refetch = async () => {
-    if (request) await invokeRequest(request, true);
+    if (request) await invokeRequest(request, {}, true);
   };
 
   useEffect(() => {

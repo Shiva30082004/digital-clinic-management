@@ -29,6 +29,8 @@ import {
 import { getFirebaseAuth } from "@/utils/firebase";
 import { signOut } from "firebase/auth";
 import useApiCall from "@/hooks/useApiCall";
+import Appointment from "@/types/Appointment";
+import useGeneratePrescription from "@/hooks/useGeneratePrescription";
 
 export default function App() {
   const router = useRouter();
@@ -99,6 +101,10 @@ export default function App() {
     }
   };
 
+  const { invokeRequest: invokeChangeAppointmentStatus } = useApiCall();
+
+  const { invokeGeneratePrescription } = useGeneratePrescription();
+
   // Show loading or nothing while checking auth
   if (isLoading) {
     return (
@@ -117,40 +123,52 @@ export default function App() {
     { id: "invoices", label: "Invoices", icon: FileText }
   ];
 
+  const onStartConsultation = async (appointment: Appointment) => {
+    switch (appointment?.appointmentStatus) {
+      case "BKD":
+        await invokeChangeAppointmentStatus({
+          endpoint: "/api/appointments/status",
+          params: { id: appointment?.appointmentID || "" },
+          payload: { appointmentStatus: "ACT" },
+          method: "PATCH"
+        });
+        setSelectedAppointment(appointment);
+        setCurrentScreen("consultation");
+        break;
+      case "ACT":
+        setSelectedAppointment(appointment);
+        setCurrentScreen("consultation");
+        break;
+      case "COM":
+        await invokeGeneratePrescription(appointment?.appointmentID || "");
+        break;
+      case "CAN":
+      default:
+    }
+  };
+
+  const onPatientSelect = (patientId: string) => {
+    setSelectedPatientId(patientId);
+    setCurrentScreen("patient-profile");
+  };
+
   const renderScreen = () => {
     switch (currentScreen) {
       case "dashboard":
         return (
           <DoctorDashboard
             doctorInfo={doctorProfileData}
-            onPatientSelect={(patientId) => {
-              setSelectedPatientId(patientId);
-              setCurrentScreen("patient-profile");
-            }}
-            onStartConsultation={(appointment) => {
-              setSelectedAppointment(appointment);
-              setCurrentScreen("consultation");
-            }}
+            onStartConsultation={onStartConsultation}
           />
         );
       case "patients":
-        return (
-          <PatientList
-            onPatientSelect={(patientId) => {
-              setSelectedPatientId(patientId);
-              setCurrentScreen("patient-profile");
-            }}
-          />
-        );
+        return <PatientList onPatientSelect={onPatientSelect} />;
       case "patient-profile":
         return (
           <PatientProfile
             patientId={selectedPatientId}
             onBack={() => setCurrentScreen("patients")}
-            onStartConsultation={(appointment) => {
-              setSelectedAppointment(appointment);
-              setCurrentScreen("consultation");
-            }}
+            onStartConsultation={onStartConsultation}
           />
         );
       case "consultation":
