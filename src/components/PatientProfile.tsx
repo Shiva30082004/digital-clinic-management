@@ -3,13 +3,11 @@ import {
   ArrowLeft,
   Plus,
   User,
-  Phone,
   Mail,
   Calendar,
   Activity,
   Heart,
   Weight,
-  Thermometer,
   FileText,
   Download,
   Eye,
@@ -39,7 +37,7 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
@@ -90,8 +88,7 @@ export function PatientProfile({
     firstName: "",
     lastName: "",
     emailAddress: "",
-    dateOfBirth: "",
-    bloodGroup: ""
+    dateOfBirth: ""
   });
 
   const isOwnAppointment = (appointment: any) => {
@@ -157,9 +154,7 @@ export function PatientProfile({
   const { isLoading = false, data: patient = {} } = useApiCall({
     request: {
       endpoint: "/api/patient",
-      params: {
-        id: patientId
-      }
+      params: { id: patientId }
     },
     fetchOnMount: true
   });
@@ -189,18 +184,75 @@ export function PatientProfile({
       </div>
     );
   }
-
+  if (!patient || !patient.patientId) {
+   return (
+     <div className="flex items-center justify-center h-64">
+          <div className="text-slate-500">Patient not found.</div>
+     </div>
+    );
+  }
   // Initialize edit form when modal opens
   const handleEditClick = () => {
+    let dobValue = "";
+    if (patient.dateOfBirth) {
+      // If backend returns full datetime, slice to YYYY-MM-DD
+      dobValue = String(patient.dateOfBirth).slice(0, 10);
+    }
+
     setEditedPatient({
       firstName: patient.firstName || "",
-      lastName: patient.lastName || "" || "",
+      lastName: patient.lastName || "",
       emailAddress: patient.emailAddress || "",
-      dateOfBirth: patient.dateOfBirth ? new Date(patient.dateOfBirth) : "",
-      bloodGroup: "A+" // TODO: Load from backend
+      dateOfBirth: dobValue
     });
+
     setShowEditProfile(true);
   };
+
+  const handleSaveEdit = async () => {
+    try {
+      await invokeRequest({
+        endpoint: "/api/patient",
+        method: "PUT",
+        payload: {
+          patientId,
+          firstName: editedPatient.firstName,
+          lastName: editedPatient.lastName,
+          emailAddress: editedPatient.emailAddress,
+          dateOfBirth: editedPatient.dateOfBirth
+        }
+      });
+
+      setShowEditProfile(false);
+
+      // refresh patient details from backend
+      refetch();
+    } catch (err) {
+      console.error("Error updating patient", err);
+      alert("Failed to update patient");
+    }
+  };
+
+
+  const handleDeletePatient = async () => {
+    if (!confirm("Are you sure you want to delete this patient?")) return;
+
+    try {
+      await invokeRequest({
+        endpoint: "/api/patient",
+        method: "DELETE",
+        params: { id: patientId }
+      });
+
+      alert("Patient deleted successfully");
+      onBack();
+    } catch (err) {
+      console.error("Error deleting patient", err);
+      alert("Failed to delete patient");
+    }
+  };
+
+
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -514,33 +566,6 @@ export function PatientProfile({
                     className="border-slate-300"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="bloodGroup"
-                    className="flex items-center text-slate-700">
-                    <Activity className="mr-2 h-4 w-4 text-blue-500" />
-                    Blood Group
-                  </Label>
-                  <select
-                    id="bloodGroup"
-                    value={editedPatient.bloodGroup}
-                    onChange={(e) =>
-                      setEditedPatient({
-                        ...editedPatient,
-                        bloodGroup: e.target.value
-                      })
-                    }
-                    className="w-full h-10 px-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="A+">A+</option>
-                    <option value="A-">A-</option>
-                    <option value="B+">B+</option>
-                    <option value="B-">B-</option>
-                    <option value="AB+">AB+</option>
-                    <option value="AB-">AB-</option>
-                    <option value="O+">O+</option>
-                    <option value="O-">O-</option>
-                  </select>
-                </div>
               </div>
 
               <Separator />
@@ -554,23 +579,18 @@ export function PatientProfile({
                       firstName: "",
                       lastName: "",
                       emailAddress: "",
-                      dateOfBirth: "",
-                      bloodGroup: ""
+                      dateOfBirth: ""
                     });
                   }}>
                   Cancel
                 </Button>
                 <Button
                   className="bg-blue-600 hover:bg-blue-700"
-                  onClick={() => {
-                    // TODO: BACKEND INTEGRATION - Update patient details in database
-                    // Example: await fetch(`/api/patient/${patient.id}`, { method: 'PUT', body: JSON.stringify(editedPatient) });
-                    console.log("Updated patient details:", editedPatient);
-                    setShowEditProfile(false);
-                  }}>
+                  onClick={handleSaveEdit}>
                   <Save className="mr-2 h-4 w-4" />
                   Save Changes
                 </Button>
+
               </div>
             </div>
           </CardContent>
@@ -613,10 +633,20 @@ export function PatientProfile({
                 </div>
               </div>
             </div>
-            <Button variant="outline" onClick={handleEditClick}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Profile
-            </Button>
+            <div className="flex space-x-2">
+              <Button variant="outline" onClick={handleEditClick}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Profile
+              </Button>
+
+              <Button
+                variant="destructive"
+                onClick={handleDeletePatient}
+              >
+                Delete
+              </Button>
+            </div>
+
           </div>
         </CardContent>
       </Card>
