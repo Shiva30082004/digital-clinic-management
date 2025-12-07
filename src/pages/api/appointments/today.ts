@@ -56,7 +56,7 @@ export default async function handler(
 
     return res.status(200).json({
       data: rows,
-      error: `Found ${rows.length} appointments for today`
+      message: `Found ${rows.length} appointments for today`
     });
   } catch (error) {
     console.error("Error fetching today's appointments:", error);

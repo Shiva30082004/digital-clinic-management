@@ -64,7 +64,7 @@ export default async function handler(
 
     return res.status(200).json({
       data: rows,
-      error: `Found visit data for ${rows.length} months`
+      message: `Found visit data for ${rows.length} months`
     });
   } catch (error) {
     console.error("Error fetching visit data:", error);

@@ -98,7 +98,7 @@ export default async function handler(
 
     return res.status(200).json({
       data: rows,
-      error: `Found ${rows.length} appointments`
+      message: `Found ${rows.length} appointments`
     });
   } catch (error) {
     console.error("Error fetching appointments by date:", error);

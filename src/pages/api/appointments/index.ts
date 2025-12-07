@@ -141,7 +141,7 @@ export default async function handler(
 
       return res.status(201).json({
         data: rows[0],
-        error: "Appointment created successfully"
+        message: "Appointment created successfully"
       });
     } catch (error) {
       console.error("Error creating appointment:", error);
@@ -247,7 +247,7 @@ export default async function handler(
 
       return res.status(200).json({
         data: rows[0],
-        error: "Appointment updated successfully"
+        message: "Appointment updated successfully"
       });
     } catch (error) {
       console.error("Error updating appointment:", error);

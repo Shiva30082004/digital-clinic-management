@@ -65,7 +65,7 @@ export default async function handler(
 
     return res.status(200).json({
       data: rows,
-      error: `Found revenue data for ${rows.length} months`
+      message: `Found revenue data for ${rows.length} months`
     });
   } catch (error) {
     console.error("Error fetching revenue data:", error);

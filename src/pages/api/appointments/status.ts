@@ -73,7 +73,7 @@ export default async function handler(
 
     return res.status(200).json({
       data: rows[0],
-      error: `Appointment status updated to ${appointmentStatus}`
+      message: `Appointment status updated to ${appointmentStatus}`
     });
   } catch (error) {
     console.error("Error updating appointment status:", error);
