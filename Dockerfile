@@ -1,19 +1,20 @@
 FROM node:lts-alpine
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apk add --no-cache \
     chromium \
-    fonts-ipafont-gothic \
-    fonts-wqy-zenhei \
-    fonts-thai-tlwg \
-    fonts-kacst \
-    fonts-freefont-ttf \
-    libxss1 \
-    && rm -rf /var/lib/apt/lists/*
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
 
 WORKDIR /app
+
 COPY package*.json ./
 
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD true
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
 RUN npm ci
 
 COPY . .
@@ -21,4 +22,5 @@ COPY . .
 RUN npm run build
 
 EXPOSE 8080
-CMD ["sh", "-c", "export CHROMIUM_PATH=/usr/bin/chromium && npm start"]
+
+CMD ["npm", "start"]

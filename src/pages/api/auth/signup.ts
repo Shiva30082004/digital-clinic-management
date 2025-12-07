@@ -25,60 +25,74 @@ export default async function handler(
 
     if (!conn) return res.status(500).end();
 
-    let _clinicId = 0;
+    await conn.query(
+      "SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;"
+    );
 
-    if (role === "admin") {
-      if (!clinicName || !zipcode) {
-        return res
-          .status(400)
-          .json({ error: "Clinic name and zipcode is required" });
+    await conn.beginTransaction();
+
+    try {
+      let _clinicId = 0;
+
+      if (role === "admin") {
+        if (!clinicName || !zipcode) {
+          return res
+            .status(400)
+            .json({ error: "Clinic name and zipcode is required" });
+        }
+
+        const createClinicQuery =
+          "INSERT INTO Clinics(ClinicName, Zipcode) VALUES (?, ?)";
+        const createClinicValues = [clinicName, zipcode];
+
+        const [{ insertId: newClinicId = 0 } = {}] =
+          await conn.execute<ResultSetHeader>(
+            createClinicQuery,
+            createClinicValues
+          );
+        _clinicId = newClinicId;
+      } else {
+        if (!clinicId) {
+          return res.status(400).json({ error: "ClinicID is required" });
+        }
+        _clinicId = clinicId;
       }
 
-      const createClinicQuery =
-        "INSERT INTO Clinics(ClinicName, Zipcode) VALUES (?, ?)";
-      const createClinicValues = [clinicName, zipcode];
+      const createDoctorQuery =
+        "INSERT INTO Doctors(FirstName, LastName, EmailAddress, Specialization, ConsultationFees, Role, ClinicID) VALUES (?, ?, ?, ?, ?, ?, ?)";
+      const createDoctorValues = [
+        firstName,
+        lastName,
+        emailAddress,
+        specialization,
+        consultationFees,
+        role,
+        _clinicId
+      ];
 
-      const [{ insertId: newClinicId = 0 } = {}] =
+      const [{ insertId: newDoctorId = 0 } = {}] =
         await conn.execute<ResultSetHeader>(
-          createClinicQuery,
-          createClinicValues
+          createDoctorQuery,
+          createDoctorValues
         );
-      _clinicId = newClinicId;
-    } else {
-      if (!clinicId) {
-        return res.status(400).json({ error: "ClinicID is required" });
-      }
-      _clinicId = clinicId;
+
+      const query = "SELECT * FROM Doctors WHERE doctorId = ?;";
+      const values = [newDoctorId];
+
+      const [rows] = await conn.execute<Doctor[]>(query, values);
+
+      await conn.commit();
+
+      return res.status(201).json({
+        data: rows[0] || {}
+      });
+    } catch (error) {
+      console.error("Error during signup:", error);
+      await conn.rollback();
+      return res.status(500).json({ error: "Internal server error" });
+    } finally {
+      conn.release();
     }
-
-    const createDoctorQuery =
-      "INSERT INTO Doctors(FirstName, LastName, EmailAddress, Specialization, ConsultationFees, Role, ClinicID) VALUES (?, ?, ?, ?, ?, ?, ?)";
-    const createDoctorValues = [
-      firstName,
-      lastName,
-      emailAddress,
-      specialization,
-      consultationFees,
-      role,
-      _clinicId
-    ];
-
-    const [{ insertId: newDoctorId = 0 } = {}] =
-      await conn.execute<ResultSetHeader>(
-        createDoctorQuery,
-        createDoctorValues
-      );
-
-    const query = "SELECT * FROM Doctors WHERE doctorId = ?;";
-    const values = [newDoctorId];
-
-    const [rows] = await conn.execute<Doctor[]>(query, values);
-
-    conn.release();
-
-    return res.status(201).json({
-      data: rows[0] || {}
-    });
   } else {
     return res.status(405).end();
   }

@@ -48,42 +48,58 @@ export default async function handler(
 
     if (!conn) return res.status(500).end();
 
-    const doctorUpdateQuery =
-      "UPDATE Doctors SET firstName = ?, lastName = ?, specialization = ?, consultationFees = ? WHERE doctorId = ?;";
-    const doctorUpdateValues = [
-      firstName,
-      lastName,
-      specialization,
-      consultationFees,
-      doctorId
-    ];
+    await conn.query(
+      "SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;"
+    );
 
-    const clinicUpdateQuery =
-      "UPDATE Clinics SET clinicName = ?, zipcode = ? WHERE clinicId = ?;";
-    const clinicUpdateValues = [clinicName, zipcode, clinicId];
+    await conn.beginTransaction();
 
-    await Promise.all([
-      conn.execute<Clinic[]>(clinicUpdateQuery, clinicUpdateValues),
-      conn.execute<Doctor[]>(doctorUpdateQuery, doctorUpdateValues)
-    ]);
+    try {
+      const doctorUpdateQuery =
+        "UPDATE Doctors SET firstName = ?, lastName = ?, specialization = ?, consultationFees = ? WHERE doctorId = ?;";
+      const doctorUpdateValues = [
+        firstName,
+        lastName,
+        specialization,
+        consultationFees,
+        doctorId
+      ];
 
-    const doctorQuery =
-      "SELECT firstName, lastName, role, emailAddress, specialization, consultationFees FROM Doctors WHERE doctorId = ?;";
-    const doctorValues = [doctorId];
+      const clinicUpdateQuery =
+        "UPDATE Clinics SET clinicName = ?, zipcode = ? WHERE clinicId = ?;";
+      const clinicUpdateValues = [clinicName, zipcode, clinicId];
 
-    const clinicQuery = "SELECT clinicName FROM Clinics WHERE clinicId = ?;";
-    const clinicValues = [clinicId];
+      await Promise.all([
+        conn.execute<Clinic[]>(clinicUpdateQuery, clinicUpdateValues),
+        conn.execute<Doctor[]>(doctorUpdateQuery, doctorUpdateValues)
+      ]);
 
-    const [[doctorRows], [clinicRows]] = await Promise.all([
-      conn.execute<Clinic[]>(clinicQuery, clinicValues),
-      conn.execute<Doctor[]>(doctorQuery, doctorValues)
-    ]);
+      const doctorQuery =
+        "SELECT firstName, lastName, role, emailAddress, specialization, consultationFees FROM Doctors WHERE doctorId = ?;";
+      const doctorValues = [doctorId];
 
-    conn.release();
+      const clinicQuery = "SELECT clinicName FROM Clinics WHERE clinicId = ?;";
+      const clinicValues = [clinicId];
 
-    return res.status(200).json({
-      data: { ...(doctorRows?.[0] || {}), ...(clinicRows?.[0] || {}) }
-    });
+      const [[doctorRows], [clinicRows]] = await Promise.all([
+        conn.execute<Clinic[]>(clinicQuery, clinicValues),
+        conn.execute<Doctor[]>(doctorQuery, doctorValues)
+      ]);
+
+      await conn.commit();
+
+      return res.status(200).json({
+        data: { ...(doctorRows?.[0] || {}), ...(clinicRows?.[0] || {}) }
+      });
+    } catch (e) {
+      await conn.rollback();
+      console.error("Error updating doctor info:", e);
+      return res
+        .status(500)
+        .json({ error: "Failed to update doctor information" });
+    } finally {
+      conn.release();
+    }
   } else {
     return res.status(405).end();
   }

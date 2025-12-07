@@ -118,6 +118,10 @@ async function handlePost(
       .json({ error: "Database connection failed" } as ConsultationResponse);
   }
 
+  await conn.query("SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE;");
+
+  await conn.beginTransaction();
+
   try {
     const [result]: any = await conn.execute(
       `INSERT INTO Consultations (
@@ -172,9 +176,12 @@ async function handlePost(
       [insertId]
     );
 
+    await conn.commit();
+
     return res.status(201).json({ data: rows[0] } as ConsultationResponse);
   } catch (err) {
     console.error(err);
+    await conn.rollback();
     return res
       .status(500)
       .json({ error: "Internal server error" } as ConsultationResponse);
@@ -216,6 +223,10 @@ async function handlePut(
       .status(500)
       .json({ error: "Database connection failed" } as ConsultationResponse);
   }
+
+  await conn.query("SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE;");
+
+  await conn.beginTransaction();
 
   try {
     const [apptRows]: any = await conn.execute(
@@ -332,11 +343,14 @@ async function handlePut(
       [appointmentID]
     );
 
+    await conn.commit();
+
     return res.status(200).json({
       data: rows[0]
     } as ConsultationResponse);
   } catch (err) {
     console.error(err);
+    await conn.rollback();
     return res
       .status(500)
       .json({ error: "Internal server error" } as ConsultationResponse);
