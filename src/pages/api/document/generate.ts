@@ -128,11 +128,11 @@ export default async function handler(
       diagnosis: diagnosis || "None",
       patient_id: `P${patientId}`,
       date: new Date(date).toLocaleString(),
-      weight: Weight ? `${Weight}kg` : "NA",
-      height: Height ? `${Height}cm` : "NA",
+      weight: Weight ? `${Weight} kg` : "NA",
+      height: Height ? `${Height} cm` : "NA",
       temperature: Temperature ? `${Temperature} F` : "NA",
       bp: SystolicBP && DiastolicBP ? `${SystolicBP}/${DiastolicBP}` : "NA",
-      heart_rate: HeartRate ? `${HeartRate}bpm` : "NA",
+      heart_rate: HeartRate ? `${HeartRate} bpm` : "NA",
       spo2: BloodOxygen ? `${BloodOxygen}%` : "NA",
       procedures:
         procedureRows.length > 0
@@ -153,7 +153,9 @@ export default async function handler(
         ${`<tr>
             <td><strong>Total</strong></td>
             <td><strong>${
-              invoice_total ? `${invoice_total}` : "Final invoice not generated"
+              invoice_total
+                ? `$${invoice_total}`
+                : "Final invoice not generated"
             }</strong></td>
           </tr>`}
     `,

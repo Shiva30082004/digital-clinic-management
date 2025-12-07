@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
   ArrowLeft,
   Plus,
@@ -7,18 +7,16 @@ import {
   Calendar,
   Activity,
   Heart,
-  Weight,
   FileText,
-  Download,
   Eye,
-  TrendingUp,
   Clock,
   X,
   Edit,
   Save,
   CheckCircle,
   CircleDashed,
-  MoreVertical
+  MoreVertical,
+  CircleGauge
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,7 +48,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import PatientVitals from "@/types/PatientVitals"; 
+import PatientVitals from "@/types/PatientVitals";
 import useApiCall from "@/hooks/useApiCall";
 import Appointment from "@/types/Appointment";
 
@@ -67,7 +65,7 @@ function isValidVital(v: any) {
   if (v === "") return false;
   const num = Number(v);
   if (Number.isNaN(num)) return false;
-  if (num <= 0) return false;        // vitals can't realistically be 0
+  if (num <= 0) return false; // vitals can't realistically be 0
   return true;
 }
 
@@ -82,7 +80,7 @@ function groupVitalsByDate(vitals: any[]) {
 
   return Object.keys(map)
     .sort()
-    .map(date => {
+    .map((date) => {
       const list = map[date];
 
       const safe = (values: any[]) =>
@@ -90,21 +88,17 @@ function groupVitalsByDate(vitals: any[]) {
 
       return {
         consultationTime: date,
-        temperature: safe(list.map(v => v.temperature)),
-        weight: safe(list.map(v => v.weight)),
-        height: safe(list.map(v => v.height)),
-        systolicBp: safe(list.map(v => v.systolicBp)),
-        diastolicBp: safe(list.map(v => v.diastolicBp)),
-        heartRate: safe(list.map(v => v.heartRate)),
-        bloodOxygen: safe(list.map(v => v.bloodOxygen)),
-        respiratoryRate: safe(list.map(v => v.respiratoryRate)),
+        temperature: safe(list.map((v) => v.temperature)),
+        weight: safe(list.map((v) => v.weight)),
+        height: safe(list.map((v) => v.height)),
+        systolicBp: safe(list.map((v) => v.systolicBp)),
+        diastolicBp: safe(list.map((v) => v.diastolicBp)),
+        heartRate: safe(list.map((v) => v.heartRate)),
+        bloodOxygen: safe(list.map((v) => v.bloodOxygen)),
+        respiratoryRate: safe(list.map((v) => v.respiratoryRate))
       };
     });
 }
-
-
-
-
 
 export function PatientProfile({
   patientId,
@@ -288,10 +282,7 @@ export function PatientProfile({
   });
 
   // Fetch vitals for this patient
-  const {
-    data: vitals = [],
-    isLoading: isLoadingVitals
-  } = useApiCall({
+  const { data: vitals = [], isLoading: isLoadingVitals } = useApiCall({
     request: {
       endpoint: "/api/patient/getPatientVitals",
       method: "GET",
@@ -300,8 +291,6 @@ export function PatientProfile({
     fetchOnMount: !!patientId
   });
   const vitalsData = groupVitalsByDate(Array.isArray(vitals) ? vitals : []);
-
-
 
   const patientName = useMemo(
     () =>
@@ -972,12 +961,11 @@ export function PatientProfile({
         </TabsContent>
 
         <TabsContent value="vitals" className="space-y-6">
-
           {/* ================= TOP: BODY MEASUREMENTS ================= */}
           <Card className="border-slate-200 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center text-base">
-                <Weight className="mr-2 h-4 w-4 text-purple-600" />
+                <CircleGauge className="mr-2 h-4 w-4 text-blue-600" />
                 Body Measurements
               </CardTitle>
             </CardHeader>
@@ -994,10 +982,10 @@ export function PatientProfile({
             <Card className="border-slate-200 shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center text-base">
-                  <Activity className="mr-2 h-4 w-4 text-blue-600" />
+                  <Heart className="mr-2 h-4 w-4 text-pink-500" />
                   Oxygen Saturation & Heart Rate
                 </CardTitle>
-              </CardHeader >
+              </CardHeader>
               <CardContent className="pt-0">
                 <div className="h-72">
                   <OxygenChart data={vitalsData} />
@@ -1009,7 +997,7 @@ export function PatientProfile({
             <Card className="border-slate-200 shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center text-base">
-                  <TrendingUp className="mr-2 h-4 w-4 text-blue-600" />
+                  <Activity className="mr-2 h-4 w-4 text-red-500" />
                   Blood Pressure Trends
                 </CardTitle>
                 <CardDescription className="text-xs">
@@ -1022,15 +1010,8 @@ export function PatientProfile({
                 </div>
               </CardContent>
             </Card>
-
           </div>
-
         </TabsContent>
-
-
-
-
-
 
         <TabsContent value="invoices" className="space-y-6">
           <Card className="border-slate-200">

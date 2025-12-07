@@ -3,7 +3,8 @@ import useApiCall from "./useApiCall";
 import { openPDFInNewWindow } from "@/utils/common.utils";
 
 const useGeneratePrescription = () => {
-  const { invokeRequest } = useApiCall<Document>();
+  const { isLoading: isGeneratingPrescription = false, invokeRequest } =
+    useApiCall<Document>();
 
   const invokeGeneratePrescription = async (appointmentId: number) => {
     await invokeRequest(
@@ -19,6 +20,7 @@ const useGeneratePrescription = () => {
   };
 
   return {
+    isGeneratingPrescription,
     invokeGeneratePrescription
   };
 };

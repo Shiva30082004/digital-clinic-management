@@ -18,7 +18,7 @@ const useApiCall = <Response>({
   fetchOnMount?: boolean;
 } = {}) => {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(fetchOnMount);
   const [data, setData] = useState<Response | null>(null);
   const [error, setError] = useState("");
   const isApiInProgressRef = useRef(false);

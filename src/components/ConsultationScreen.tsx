@@ -15,7 +15,9 @@ import {
   FileText,
   Stethoscope,
   Pill,
-  ClipboardList
+  ClipboardList,
+  Ruler,
+  Gauge
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -135,7 +137,8 @@ export function ConsultationScreen({
     fetchOnMount: false
   });
 
-  const { invokeGeneratePrescription } = useGeneratePrescription();
+  const { isGeneratingPrescription = false, invokeGeneratePrescription } =
+    useGeneratePrescription();
 
   const handleGeneratePrescription = async () => {
     invokeGeneratePrescription(appointmentId);
@@ -289,6 +292,14 @@ export function ConsultationScreen({
     );
   }
 
+  if (isGeneratingPrescription) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-slate-500">Generating prescription...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -377,12 +388,11 @@ export function ConsultationScreen({
                   <Label
                     htmlFor="weight"
                     className="flex items-center text-slate-700">
-                    <Weight className="mr-2 h-4 w-4 text-blue-500" />
+                    <Weight className="mr-2 h-4 w-4 text-purple-600" />
                     Weight (kg)
                   </Label>
                   <Input
                     id="weight"
-                    placeholder="70"
                     type="number"
                     value={vitals.weight}
                     onChange={(e) =>
@@ -395,12 +405,11 @@ export function ConsultationScreen({
                   <Label
                     htmlFor="height"
                     className="flex items-center text-slate-700">
-                    <Weight className="mr-2 h-4 w-4 text-blue-500" />
+                    <Ruler className="mr-2 h-4 w-4 text-blue-500" />
                     Height (cm)
                   </Label>
                   <Input
                     id="height"
-                    placeholder="160"
                     type="number"
                     value={vitals.height}
                     onChange={(e) =>
@@ -418,7 +427,6 @@ export function ConsultationScreen({
                   </Label>
                   <Input
                     id="temp"
-                    placeholder="98.6"
                     type="number"
                     value={vitals.temperature}
                     onChange={(e) =>
@@ -436,7 +444,6 @@ export function ConsultationScreen({
                   </Label>
                   <Input
                     id="bp"
-                    placeholder="120/80"
                     value={vitals.bloodPressure}
                     onChange={(e) =>
                       setVitals({ ...vitals, bloodPressure: e.target.value })
@@ -453,7 +460,6 @@ export function ConsultationScreen({
                   </Label>
                   <Input
                     id="hr"
-                    placeholder="72"
                     type="number"
                     value={vitals.heartRate}
                     onChange={(e) =>
@@ -466,12 +472,11 @@ export function ConsultationScreen({
                   <Label
                     htmlFor="spo2"
                     className="flex items-center text-slate-700">
-                    <Heart className="mr-2 h-4 w-4 text-pink-500" />
+                    <Gauge className="mr-2 h-4 w-4 text-pink-500" />
                     SpO2 (%)
                   </Label>
                   <Input
                     id="spo2"
-                    placeholder="90"
                     type="number"
                     value={vitals.bloodOxygen}
                     onChange={(e) =>
