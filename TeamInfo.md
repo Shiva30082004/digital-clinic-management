@@ -20,7 +20,7 @@
 | Info       | Description                        |
 | ---------- | ---------------------------------- |
 | Title      | Digital Clinic Management Platform |
-| System URL | link_to_system                     |
+| System URL | [https://fa25-cs411-team102-sequelite-153046959301.us-central1.run.app/](https://fa25-cs411-team102-sequelite-153046959301.us-central1.run.app/login)                     |
 | Video Link | link_to_video                      |
 
 ## Project Summary
