@@ -18,7 +18,7 @@ async function createDbConnectionPool() {
     ...clientOpts,
     user: process.env.DB_USER,
     database: process.env.DB_NAME,
-    connectionLimit: 10
+    connectionLimit: 20
   });
 }
 

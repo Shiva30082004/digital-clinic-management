@@ -18,22 +18,18 @@ export default async function handler(
     if (!conn) return res.status(500).end();
 
     const doctorQuery =
-      "SELECT doctorId, clinicId, firstName, lastName, role, emailAddress, specialization, consultationFees FROM Doctors WHERE doctorId = ?;";
-    const doctorValues = [doctorId];
+      "SELECT doctorId, clinicId, firstName, lastName, role, emailAddress, specialization, consultationFees, clinicName, zipcode FROM Doctors NATURAL JOIN Clinics WHERE doctorId = ? AND clinicId = ?;";
+    const doctorValues = [doctorId, clinicId];
 
-    const clinicQuery =
-      "SELECT clinicName, zipcode FROM Clinics WHERE clinicId = ?;";
-    const clinicValues = [clinicId];
-
-    const [[doctorRows], [clinicRows]] = await Promise.all([
-      conn.execute<Clinic[]>(clinicQuery, clinicValues),
-      conn.execute<Doctor[]>(doctorQuery, doctorValues)
-    ]);
+    const [doctorRows] = await conn.execute<(Doctor & Clinic)[]>(
+      doctorQuery,
+      doctorValues
+    );
 
     conn.release();
 
     return res.status(200).json({
-      data: { ...(doctorRows?.[0] || {}), ...(clinicRows?.[0] || {}) }
+      data: doctorRows?.[0] || {}
     });
   } else if (req.method === "PUT") {
     const doctorId = req.headers[DOCTOR_ID_HEADER_KEY] as string;

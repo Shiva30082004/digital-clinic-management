@@ -60,6 +60,14 @@ export default function App() {
     fetchOnMount: true
   });
 
+  const { data: topProcedures = [] } = useApiCall({
+    request: {
+      endpoint: "/api/procedure/getTopProcedures",
+      method: "GET"
+    },
+    fetchOnMount: !!doctorProfileData?.doctorId
+  });
+
   const { invokeRequest: invokeSaveProfile } = useApiCall();
 
   useEffect(() => {
@@ -205,7 +213,7 @@ export default function App() {
           </div>
 
           {/* Doctor Info */}
-          <div className="flex items-center space-x-3 p-3 bg-slate-50 rounded-lg">
+          <div className="flex items-center space-x-3 p-3 bg-slate-50 rounded-lg mb-4">
             <Avatar className="h-9 w-9">
               <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=doctor" />
               <AvatarFallback className="bg-blue-100 text-blue-600">
@@ -225,6 +233,26 @@ export default function App() {
               {doctorProfileData?.role === "admin" ? "Admin" : "Consultant"}
             </Badge>
           </div>
+
+          {(topProcedures || []).length > 0 && (
+            <div className="flex items-center space-x-3 p-3 bg-slate-50 rounded-lg">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-900 mb-1 truncate">
+                  Top Procedures
+                </p>
+                {(topProcedures || []).map((procedure, i) => {
+                  return (
+                    <p
+                      key={procedure.procedureName}
+                      className="text-xs text-slate-500 mb-1">
+                      <span className="font-semibold">#{i + 1}</span>{" "}
+                      {procedure.procedureName}
+                    </p>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Navigation Menu */}
