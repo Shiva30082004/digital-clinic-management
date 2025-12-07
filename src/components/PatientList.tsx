@@ -2,19 +2,16 @@ import React, { useState } from "react";
 import {
   Search,
   Plus,
-  Phone,
   Mail,
   Calendar,
   User,
   ChevronRight,
-  Filter
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -34,7 +31,13 @@ import {
 import useApiCall from "@/hooks/useApiCall";
 import { debounce } from "lodash";
 
-export function PatientList({ onPatientSelect }) {
+import { CLINIC_ID_HEADER_KEY } from "@/constants/auth";
+import Patient from "@/types/Patient";
+
+
+export function PatientList({ onPatientSelect }: {
+  onPatientSelect: (id: number) => void;
+}) {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
   const [newPatient, setNewPatient] = useState({
@@ -42,36 +45,61 @@ export function PatientList({ onPatientSelect }) {
     lastName: "",
     dateOfBirth: "",
     gender: "",
-    bloodGroup: "",
-    phoneNumber: "",
     email: ""
   });
 
-  const { data: patients = [] } = useApiCall({
+  const {
+    data: patients
+  }: { data: Patient[] | null } = useApiCall({
     request: {
       endpoint: "/api/patient",
-      params: {
-        search: searchTerm
-      }
+      params: { search: searchTerm }
     },
     fetchOnMount: true
   });
 
-  const handleAddPatient = () => {
-    // TODO: Call API to add new patient
-    console.log("Adding new patient:", newPatient);
-    setIsAddPatientOpen(false);
-    // Reset form
-    setNewPatient({
-      firstName: "",
-      lastName: "",
-      dateOfBirth: "",
-      gender: "",
-      bloodGroup: "",
-      phoneNumber: "",
-      email: ""
-    });
+  const handleAddPatient = async () => {
+    try {
+      const gender = newPatient.gender;
+
+      const res = await fetch("/api/patient", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          [CLINIC_ID_HEADER_KEY]: "242" 
+        },
+        body: JSON.stringify({
+          firstName: newPatient.firstName,
+          lastName: newPatient.lastName || null,
+          emailAddress: newPatient.email || null,
+          gender,
+          dateOfBirth: newPatient.dateOfBirth || null
+        })
+      });
+
+      const { error } = await res.json();
+
+      if (!res.ok) {
+        alert(error || "Error creating patient");
+        return;
+      }
+
+      setIsAddPatientOpen(false);
+      setNewPatient({
+        firstName: "",
+        lastName: "",
+        dateOfBirth: "",
+        gender: "",
+        email: ""
+      });
+
+      window.location.reload();
+    } catch (err) {
+      console.error("Error creating patient", err);
+      alert("Something went wrong while creating patient");
+    }
   };
+
 
   return (
     <div className="space-y-6">
@@ -110,7 +138,7 @@ export function PatientList({ onPatientSelect }) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {(patients || []).map((patient) => (
           <Card
-            key={patient.id}
+            key={patient.patientId}
             className="border-slate-200 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer group"
             onClick={() => onPatientSelect(patient.patientId || "")}>
             <CardContent className="p-6">
@@ -270,57 +298,16 @@ export function PatientList({ onPatientSelect }) {
                   <SelectTrigger>
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
+                    <SelectContent>
+                      <SelectItem value="M">Male</SelectItem>
+                      <SelectItem value="F">Female</SelectItem>
+                    </SelectContent>
                 </Select>
               </div>
             </div>
 
-            {/* Blood Group */}
-            <div className="space-y-2">
-              <Label htmlFor="bloodGroup">Blood Group</Label>
-              <Select
-                value={newPatient.bloodGroup}
-                onValueChange={(value) =>
-                  setNewPatient({ ...newPatient, bloodGroup: value })
-                }>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select blood group" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="A+">A+</SelectItem>
-                  <SelectItem value="A-">A-</SelectItem>
-                  <SelectItem value="B+">B+</SelectItem>
-                  <SelectItem value="B-">B-</SelectItem>
-                  <SelectItem value="AB+">AB+</SelectItem>
-                  <SelectItem value="AB-">AB-</SelectItem>
-                  <SelectItem value="O+">O+</SelectItem>
-                  <SelectItem value="O-">O-</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             {/* Contact Information */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="phoneNumber">Phone Number *</Label>
-                <Input
-                  id="phoneNumber"
-                  type="tel"
-                  value={newPatient.phoneNumber}
-                  onChange={(e) =>
-                    setNewPatient({
-                      ...newPatient,
-                      phoneNumber: e.target.value
-                    })
-                  }
-                  placeholder="+1 (555) 123-4567"
-                  required
-                />
-              </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input

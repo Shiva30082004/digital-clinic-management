@@ -3,13 +3,11 @@ import {
   ArrowLeft,
   Plus,
   User,
-  Phone,
   Mail,
   Calendar,
   Activity,
   Heart,
   Weight,
-  Thermometer,
   FileText,
   Download,
   Eye,
@@ -28,13 +26,14 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import useApiCall from "@/hooks/useApiCall";
+import { CLINIC_ID_HEADER_KEY } from "@/constants/auth";
+import Patient from "@/types/Patient";
 
 const appointmentHistory = [
   {
@@ -73,7 +72,14 @@ const mockDocuments = [
   { id: 3, name: "Medical Certificate", type: "PDF", date: "2025-03-22" }
 ];
 
-export function PatientProfile({ patientId, onBack, onStartConsultation }) {
+type PatientProfileProps = {
+  patientId: string;
+  onBack: () => void;
+  onStartConsultation: (appointment: any) => void; // you can refine later
+};
+
+
+export function PatientProfile({ patientId, onBack, onStartConsultation }: PatientProfileProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [newAppointment, setNewAppointment] = useState({
@@ -87,19 +93,31 @@ export function PatientProfile({ patientId, onBack, onStartConsultation }) {
     firstName: "",
     lastName: "",
     emailAddress: "",
-    dateOfBirth: "",
-    bloodGroup: ""
+    dateOfBirth: ""
   });
 
-  const { isLoading = false, data: patient = {} } = useApiCall({
+  const {
+    isLoading = false,
+    data: patient
+  }: {
+    isLoading: boolean;
+    data: Patient | null;
+  } = useApiCall({
     request: {
       endpoint: "/api/patient",
-      params: {
-        id: patientId
-      }
+      params: { id: patientId }
     },
     fetchOnMount: true
   });
+ 
+  if (!patient) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-slate-500">Patient not found.</div>
+      </div>
+    );
+  }
+
 
   const patientName = useMemo(
     () =>
@@ -116,18 +134,89 @@ export function PatientProfile({ patientId, onBack, onStartConsultation }) {
       </div>
     );
   }
-
+  if (!patient || !patient.patientId) {
+   return (
+     <div className="flex items-center justify-center h-64">
+          <div className="text-slate-500">Patient not found.</div>
+     </div>
+    );
+  }
   // Initialize edit form when modal opens
   const handleEditClick = () => {
+    let dobValue = "";
+    if (patient.dateOfBirth) {
+      // If backend returns full datetime, slice to YYYY-MM-DD
+      dobValue = String(patient.dateOfBirth).slice(0, 10);
+    }
+
     setEditedPatient({
       firstName: patient.firstName || "",
-      lastName: patient.lastName || "" || "",
+      lastName: patient.lastName || "",
       emailAddress: patient.emailAddress || "",
-      dateOfBirth: patient.dateOfBirth ? new Date(patient.dateOfBirth) : "",
-      bloodGroup: "A+" // TODO: Load from backend
+      dateOfBirth: dobValue
     });
+
     setShowEditProfile(true);
   };
+
+  const handleSaveEdit = async () => {
+    try {
+      const res = await fetch("/api/patient", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          [CLINIC_ID_HEADER_KEY]: "242"
+        },
+        body: JSON.stringify({
+          patientId,
+          firstName: editedPatient.firstName,
+          lastName: editedPatient.lastName,
+          emailAddress: editedPatient.emailAddress,
+          dateOfBirth: editedPatient.dateOfBirth
+        })
+      });
+
+      const { error } = await res.json();
+
+      if (!res.ok) {
+        alert(error || "Failed to update patient");
+        return;
+      }
+
+      setShowEditProfile(false);
+      window.location.reload();
+    } catch (err) {
+      console.error("Error updating patient", err);
+      alert("Something went wrong while updating patient");
+    } 
+  };
+
+  const handleDeletePatient = async () => {
+    if (!confirm("Are you sure you want to delete this patient?")) return;
+
+    try {
+      const res = await fetch(`/api/patient?id=${patientId}`, {
+        method: "DELETE",
+        headers: {
+          [CLINIC_ID_HEADER_KEY]: "242"
+        }
+      });
+
+      const { error } = await res.json();
+
+      if (!res.ok) {
+        alert(error || "Failed to delete patient");
+        return;
+      }
+
+      alert("Patient deleted successfully");
+      onBack(); // Go back to list
+    } catch (err) {
+      console.error("Error deleting patient", err);
+      alert("Something went wrong while deleting the patient");
+    }
+  };
+
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -441,33 +530,6 @@ export function PatientProfile({ patientId, onBack, onStartConsultation }) {
                     className="border-slate-300"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="bloodGroup"
-                    className="flex items-center text-slate-700">
-                    <Activity className="mr-2 h-4 w-4 text-blue-500" />
-                    Blood Group
-                  </Label>
-                  <select
-                    id="bloodGroup"
-                    value={editedPatient.bloodGroup}
-                    onChange={(e) =>
-                      setEditedPatient({
-                        ...editedPatient,
-                        bloodGroup: e.target.value
-                      })
-                    }
-                    className="w-full h-10 px-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="A+">A+</option>
-                    <option value="A-">A-</option>
-                    <option value="B+">B+</option>
-                    <option value="B-">B-</option>
-                    <option value="AB+">AB+</option>
-                    <option value="AB-">AB-</option>
-                    <option value="O+">O+</option>
-                    <option value="O-">O-</option>
-                  </select>
-                </div>
               </div>
 
               <Separator />
@@ -481,23 +543,18 @@ export function PatientProfile({ patientId, onBack, onStartConsultation }) {
                       firstName: "",
                       lastName: "",
                       emailAddress: "",
-                      dateOfBirth: "",
-                      bloodGroup: ""
+                      dateOfBirth: ""
                     });
                   }}>
                   Cancel
                 </Button>
                 <Button
                   className="bg-blue-600 hover:bg-blue-700"
-                  onClick={() => {
-                    // TODO: BACKEND INTEGRATION - Update patient details in database
-                    // Example: await fetch(`/api/patient/${patient.id}`, { method: 'PUT', body: JSON.stringify(editedPatient) });
-                    console.log("Updated patient details:", editedPatient);
-                    setShowEditProfile(false);
-                  }}>
+                  onClick={handleSaveEdit}>
                   <Save className="mr-2 h-4 w-4" />
                   Save Changes
                 </Button>
+
               </div>
             </div>
           </CardContent>
@@ -540,10 +597,20 @@ export function PatientProfile({ patientId, onBack, onStartConsultation }) {
                 </div>
               </div>
             </div>
-            <Button variant="outline" onClick={handleEditClick}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Profile
-            </Button>
+            <div className="flex space-x-2">
+              <Button variant="outline" onClick={handleEditClick}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Profile
+              </Button>
+
+              <Button
+                variant="destructive"
+                onClick={handleDeletePatient}
+              >
+                Delete
+              </Button>
+            </div>
+
           </div>
         </CardContent>
       </Card>
