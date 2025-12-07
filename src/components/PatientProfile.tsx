@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   ArrowLeft,
   Plus,
@@ -15,7 +15,10 @@ import {
   Clock,
   X,
   Edit,
-  Save
+  Save,
+  CheckCircle,
+  CircleDashed,
+  MoreVertical
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,63 +28,55 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import useApiCall from "@/hooks/useApiCall";
-import { CLINIC_ID_HEADER_KEY } from "@/constants/auth";
-import Patient from "@/types/Patient";
+import Appointment from "@/types/Appointment";
 
-const appointmentHistory = [
-  {
-    id: 1,
-    date: "2025-06-15",
-    time: "10:00 AM",
-    type: "General Checkup",
-    status: "Completed"
-  },
-  {
-    id: 2,
-    date: "2025-05-15",
-    time: "2:30 PM",
-    type: "Follow-up",
-    status: "Completed"
-  },
-  {
-    id: 3,
-    date: "2025-04-10",
-    time: "11:15 AM",
-    type: "Blood Test",
-    status: "Completed"
-  },
-  {
-    id: 4,
-    date: "2025-06-20",
-    time: "9:00 AM",
-    type: "Consultation",
-    status: "Booked"
-  }
-];
-
-const mockDocuments = [
-  { id: 1, name: "Prescription - June 2025", type: "PDF", date: "2025-06-15" },
-  { id: 2, name: "Lab Report - Blood Test", type: "PDF", date: "2025-04-10" },
-  { id: 3, name: "Medical Certificate", type: "PDF", date: "2025-03-22" }
-];
-
-type PatientProfileProps = {
-  patientId: number;
-  onBack: () => void;
-  onStartConsultation: (appointment: any) => void; // you can refine later
-};
-
-
-export function PatientProfile({ patientId, onBack, onStartConsultation }: PatientProfileProps) {
+export function PatientProfile({
+  patientId,
+  onBack,
+  onStartConsultation,
+  doctorInfo
+}) {
+  const {
+    data: appointments = [],
+    isLoading: isLoadingAppointments,
+    refetch: refetchAppointments
+  } = useApiCall<Appointment[]>({
+    request: {
+      endpoint: "/api/appointments/byPatient",
+      method: "GET",
+      params: {
+        patientId
+      }
+    },
+    fetchOnMount: !!patientId
+  });
+  const { invokeRequest: updateAppointmentRequest } = useApiCall();
   const [activeTab, setActiveTab] = useState("overview");
   const [showNewAppointment, setShowNewAppointment] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [newAppointment, setNewAppointment] = useState({
     date: "",
     startTime: "",
@@ -96,12 +91,67 @@ export function PatientProfile({ patientId, onBack, onStartConsultation }: Patie
     dateOfBirth: ""
   });
 
-  const {
-    isLoading,
-    data: patient,
-    refetch,
-    invokeRequest
-  } = useApiCall<Patient>({
+  const isOwnAppointment = (appointment: any) => {
+    return appointment.doctorID === doctorInfo?.doctorId;
+  };
+
+  const isAdmin = doctorInfo?.role === "admin";
+
+  // Convert API status codes to display format
+  const convertStatusToDisplay = (apiStatus: string) => {
+    const statusMap: { [key: string]: string } = {
+      BKD: "Booked",
+      ACT: "Active",
+      COM: "Completed",
+      CAN: "Cancelled"
+    };
+    return statusMap[apiStatus] || apiStatus;
+  };
+
+  // Convert display status to API format
+  const convertStatusToApi = (displayStatus: string) => {
+    const statusMap: { [key: string]: string } = {
+      Booked: "BKD",
+      Active: "ACT",
+      Completed: "COM",
+      Cancelled: "CAN"
+    };
+    return statusMap[displayStatus] || displayStatus;
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "completed":
+        return <CheckCircle className="h-4 w-4" />;
+      case "active":
+        return <Activity className="h-4 w-4" />;
+      default:
+        return <CircleDashed className="h-4 w-4" />;
+    }
+  };
+
+  const handleUpdateStatus = async (
+    appointmentId: number,
+    newStatus: string
+  ) => {
+    try {
+      await updateAppointmentRequest({
+        endpoint: "/api/appointments",
+        method: "PUT",
+        payload: {
+          appointmentID: appointmentId,
+          appointmentStatus: convertStatusToApi(newStatus)
+        }
+      });
+      console.log("Appointment status updated:", appointmentId, newStatus);
+      // Refresh appointments list
+      refetchAppointments();
+    } catch (error) {
+      console.error("Failed to update appointment status:", error);
+    }
+  };
+
+  const { isLoading = false, data: patient = {} } = useApiCall({
     request: {
       endpoint: "/api/patient",
       params: { id: patientId }
@@ -109,6 +159,15 @@ export function PatientProfile({ patientId, onBack, onStartConsultation }: Patie
     fetchOnMount: true
   });
 
+  const { data: invoices = [] } = useApiCall({
+    request: {
+      endpoint: "/api/invoice",
+      params: {
+        patientId
+      }
+    },
+    fetchOnMount: !!patientId
+  });
 
   const patientName = useMemo(
     () =>
@@ -597,177 +656,194 @@ export function PatientProfile({ patientId, onBack, onStartConsultation }: Patie
         defaultValue="overview"
         className="space-y-4"
         onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="appointments">Appointments</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">Appointments</TabsTrigger>
           <TabsTrigger value="vitals">Vitals & Charts</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="invoices">Invoices</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="border-slate-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">
-                  Total Visits
-                </CardTitle>
-                <Calendar className="h-4 w-4 text-blue-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-slate-900">24</div>
-                <p className="text-xs text-slate-500 mt-1">Last: 2 days ago</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-slate-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">
-                  Blood Pressure
-                </CardTitle>
-                <Activity className="h-4 w-4 text-red-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-slate-900">121/80</div>
-                <p className="text-xs text-green-600 mt-1">Normal range</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-slate-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">
-                  Heart Rate
-                </CardTitle>
-                <Heart className="h-4 w-4 text-pink-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-slate-900">72</div>
-                <p className="text-xs text-slate-500 mt-1">bpm</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-slate-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">
-                  Weight
-                </CardTitle>
-                <Weight className="h-4 w-4 text-purple-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-slate-900">73</div>
-                <p className="text-xs text-slate-500 mt-1">kg</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Recent Appointments */}
+          {/* All Appointments */}
           <Card className="border-slate-200">
             <CardHeader>
-              <CardTitle>Recent Appointments</CardTitle>
-              <CardDescription>Latest consultation history</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {appointmentHistory.slice(0, 3).map((appointment) => (
-                  <div
-                    key={appointment.id}
-                    className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
-                        <Calendar className="h-5 w-5 text-slate-600" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-slate-900">
-                          {appointment.type}
-                        </p>
-                        <p className="text-sm text-slate-600">
-                          {appointment.date} at {appointment.time}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge
-                        variant="secondary"
-                        className={getStatusColor(appointment.status)}>
-                        {appointment.status}
-                      </Badge>
-                      {(appointment.status === "Booked" ||
-                        appointment.status === "Active") && (
-                        <Button
-                          size="sm"
-                          onClick={() => onStartConsultation(appointment)}>
-                          Start
-                        </Button>
-                      )}
-                      {appointment.status === "Completed" && (
-                        <Button variant="outline" size="sm">
-                          <Eye className="mr-1 h-3 w-3" />
-                          View
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="appointments" className="space-y-4">
-          <Card className="border-slate-200">
-            <CardHeader>
-              <CardTitle>Appointment History</CardTitle>
+              <CardTitle>All Appointments</CardTitle>
               <CardDescription>
-                All appointments for this patient
+                Complete appointment history for this patient
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {appointmentHistory.map((appointment) => (
-                  <div
-                    key={appointment.id}
-                    className="border border-slate-200 rounded-lg p-4 hover:border-slate-300 transition-colors">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h4 className="font-semibold text-slate-900">
-                          {appointment.type}
-                        </h4>
-                        <p className="text-sm text-slate-600 mt-1">
-                          <Clock className="inline h-3 w-3 mr-1" />
-                          {appointment.date} at {appointment.time}
-                        </p>
+              {isLoadingAppointments && (appointments || []).length === 0 ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : (appointments || []).length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <Calendar className="h-12 w-12 mx-auto mb-2 text-slate-300" />
+                  <p>No appointments found for this patient</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {(appointments || []).map((appointment) => {
+                    const startTime = new Date(appointment.startTime);
+                    const endTime = new Date(appointment.endTime);
+                    const hours = startTime.getHours();
+                    const minutes = String(startTime.getMinutes()).padStart(
+                      2,
+                      "0"
+                    );
+                    const timeString = `${hours}:${minutes}`;
+                    const endHours = endTime.getHours();
+                    const endMinutes = String(endTime.getMinutes()).padStart(
+                      2,
+                      "0"
+                    );
+                    const dateString = startTime.toLocaleDateString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric"
+                    });
+
+                    const canViewAppointment =
+                      (!isAdmin || isOwnAppointment(appointment)) &&
+                      appointment?.appointmentStatus !== "CAN";
+
+                    return (
+                      <div
+                        key={appointment.appointmentID}
+                        className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:border-slate-300 hover:shadow-sm transition-all">
+                        <div className="flex items-center space-x-4 flex-1">
+                          <div className="flex items-center justify-center w-16 h-16 bg-slate-100 rounded-lg">
+                            <div className="text-center">
+                              <div className="text-xs font-medium text-slate-600">
+                                {hours.toString().padStart(2, "0")}
+                              </div>
+                              <div className="text-lg font-bold text-slate-900">
+                                {minutes}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold text-slate-900">
+                              {dateString}
+                            </p>
+                            <p className="text-sm text-slate-600">
+                              {timeString} - {endHours}:{endMinutes}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Badge
+                            variant="secondary"
+                            className={getStatusColor(
+                              convertStatusToDisplay(
+                                appointment.appointmentStatus
+                              )
+                            )}>
+                            {getStatusIcon(
+                              convertStatusToDisplay(
+                                appointment.appointmentStatus
+                              )
+                            )}
+                            <span className="ml-1 capitalize">
+                              {convertStatusToDisplay(
+                                appointment.appointmentStatus
+                              )}
+                            </span>
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onStartConsultation(appointment)}
+                            disabled={!canViewAppointment}
+                            className={
+                              !canViewAppointment
+                                ? "opacity-50 cursor-not-allowed"
+                                : ""
+                            }>
+                            <Eye className="mr-1 h-3 w-3" />
+                            View
+                          </Button>
+                          <div className="relative">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() =>
+                                setOpenMenuId(
+                                  openMenuId === appointment.appointmentID
+                                    ? null
+                                    : appointment.appointmentID
+                                )
+                              }>
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                            {openMenuId === appointment.appointmentID && (
+                              <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                                <div className="py-1" role="menu">
+                                  <button
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={() => {
+                                      onStartConsultation(appointment);
+                                      setOpenMenuId(null);
+                                    }}>
+                                    Start Consultation
+                                  </button>
+                                  <div className="border-t border-gray-100"></div>
+                                  <button
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={() => {
+                                      handleUpdateStatus(
+                                        appointment.appointmentID,
+                                        "Booked"
+                                      );
+                                      setOpenMenuId(null);
+                                    }}>
+                                    Mark as Booked
+                                  </button>
+                                  <button
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={() => {
+                                      handleUpdateStatus(
+                                        appointment.appointmentID,
+                                        "Active"
+                                      );
+                                      setOpenMenuId(null);
+                                    }}>
+                                    Mark as Active
+                                  </button>
+                                  <button
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={() => {
+                                      handleUpdateStatus(
+                                        appointment.appointmentID,
+                                        "Completed"
+                                      );
+                                      setOpenMenuId(null);
+                                    }}>
+                                    Mark as Completed
+                                  </button>
+                                  <button
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={() => {
+                                      handleUpdateStatus(
+                                        appointment.appointmentID,
+                                        "Cancelled"
+                                      );
+                                      setOpenMenuId(null);
+                                    }}>
+                                    Mark as Cancelled
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <Badge
-                        variant="secondary"
-                        className={getStatusColor(appointment.status)}>
-                        {appointment.status}
-                      </Badge>
-                    </div>
-                    <Separator className="my-3" />
-                    <div className="flex space-x-2">
-                      {(appointment.status === "Booked" ||
-                        appointment.status === "Active") && (
-                        <Button
-                          size="sm"
-                          onClick={() => onStartConsultation(appointment)}>
-                          Start Consultation
-                        </Button>
-                      )}
-                      {appointment.status === "Completed" && (
-                        <>
-                          <Button variant="outline" size="sm">
-                            View Details
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Download className="mr-1 h-3 w-3" />
-                            Download
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -833,50 +909,68 @@ export function PatientProfile({ patientId, onBack, onStartConsultation }: Patie
           </div>
         </TabsContent>
 
-        <TabsContent value="documents" className="space-y-4">
+        <TabsContent value="invoices" className="space-y-6">
           <Card className="border-slate-200">
             <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Medical Documents</CardTitle>
-                  <CardDescription>
-                    Prescriptions, reports, and certificates
-                  </CardDescription>
-                </div>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Upload Document
-                </Button>
-              </div>
+              <CardTitle>All Invoices</CardTitle>
+              <CardDescription>Manage and track all invoices</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {mockDocuments.map((doc) => (
-                  <div
-                    key={doc.id}
-                    className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                        <FileText className="h-5 w-5 text-red-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-900">{doc.name}</p>
-                        <p className="text-sm text-slate-500">
-                          {doc.type} • {doc.date}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Button variant="ghost" size="icon">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {(invoices || []).length === 0 ? (
+                <Card className="border-slate-200">
+                  <CardContent className="py-12 text-center">
+                    <FileText className="h-12 w-12 mx-auto mb-4 text-slate-400" />
+                    <h3 className="font-semibold text-slate-900 mb-2">
+                      No invoices found
+                    </h3>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Invoice ID</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead className="text-right">View</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(invoices || []).map((invoice) => (
+                      <TableRow
+                        key={invoice.InvoiceID}
+                        className="cursor-pointer hover:bg-slate-50">
+                        <TableCell className="font-medium">
+                          {invoice.InvoiceID}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center text-slate-600">
+                            <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                            {new Date(
+                              invoice?.StartTime
+                            ).toLocaleDateString() || "-"}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-semibold">
+                          ${(Number(invoice.Amount) || 0).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                onStartConsultation(invoice.AppointmentID)
+                              }>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

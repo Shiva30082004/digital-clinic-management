@@ -9,8 +9,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Appointment>>
 ) {
-  // Get doctorID from headers (production) or query params (testing)
-  const doctorID = (req.headers[DOCTOR_ID_HEADER_KEY] as string) || (req.query.doctorId as string);
+  // Get doctorID from headers (production)
+  const doctorID = (req.headers[DOCTOR_ID_HEADER_KEY] as string);
 
   if (req.method !== "PATCH") {
     return res.status(405).json({ message: "Method not allowed" });

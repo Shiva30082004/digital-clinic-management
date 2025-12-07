@@ -1,4 +1,4 @@
-import { DOCTOR_ID_HEADER_KEY } from "@/constants/auth";
+import { DOCTOR_ID_HEADER_KEY, CLINIC_ID_HEADER_KEY, ROLE_HEADER_KEY } from "@/constants/auth";
 import { getDbConnection } from "@/lib/database";
 import ApiResponse from "@/types/ApiResponse";
 import Appointment from "@/types/Appointment";
@@ -9,8 +9,10 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Appointment[]>>
 ) {
-  // Get doctorID from headers (production) or query params (testing)
-  const doctorID = (req.headers[DOCTOR_ID_HEADER_KEY] as string) || (req.query.doctorId as string);
+  // Get user info from headers (production) or query params (testing)
+  const doctorID = (req.headers[DOCTOR_ID_HEADER_KEY] as string);
+  const clinicID = (req.headers[CLINIC_ID_HEADER_KEY] as string);
+  const role = (req.headers[ROLE_HEADER_KEY] as string);
 
   if (req.method !== "GET") {
     return res.status(405).json({ message: "Method not allowed" });
@@ -36,22 +38,41 @@ export default async function handler(
   }
 
   try {
-    // Build query with optional status filter
+    // Build query with optional status filter - JOIN with Patients table for names
     let query = `
       SELECT 
-        AppointmentID as appointmentID,
-        AppointmentStatus as appointmentStatus,
-        StartTime as startTime,
-        EndTime as endTime,
-        PatientID as patientID,
-        DoctorID as doctorID
-      FROM Appointments 
-      WHERE DoctorID = ?
-        AND DATE(StartTime) >= ?
-        AND DATE(StartTime) <= ?
+        a.AppointmentID as appointmentID,
+        a.AppointmentStatus as appointmentStatus,
+        a.StartTime as startTime,
+        a.EndTime as endTime,
+        a.PatientID as patientID,
+        a.DoctorID as doctorID,
+        p.FirstName as patientFirstName,
+        p.LastName as patientLastName
+      FROM Appointments a
+      LEFT JOIN Patients p ON a.PatientID = p.PatientID
     `;
     
-    const values: any[] = [doctorID, startDate, endDate];
+    const values: any[] = [];
+
+    // Filter based on role
+    if (role === 'admin') {
+      // Admin: filter by clinicID (get all appointments for the clinic)
+      query += `
+      WHERE a.DoctorID IN (SELECT DoctorID FROM Doctors WHERE ClinicID = ?)
+        AND DATE(a.StartTime) >= ?
+        AND DATE(a.StartTime) <= ?
+      `;
+      values.push(clinicID, startDate, endDate);
+    } else {
+      // Doctor: filter by doctorID
+      query += `
+      WHERE a.DoctorID = ?
+        AND DATE(a.StartTime) >= ?
+        AND DATE(a.StartTime) <= ?
+      `;
+      values.push(doctorID, startDate, endDate);
+    }
 
     // Add status filter if provided
     if (status) {
@@ -61,11 +82,11 @@ export default async function handler(
           message: "Invalid status. Must be one of: BKD, ACT, COM, CAN" 
         });
       }
-      query += " AND AppointmentStatus = ?";
+      query += " AND a.AppointmentStatus = ?";
       values.push(status);
     }
 
-    query += " ORDER BY StartTime ASC";
+    query += " ORDER BY a.StartTime ASC";
 
     const [rows] = await conn.execute<Appointment[]>(query, values);
 

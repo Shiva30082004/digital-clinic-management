@@ -4,7 +4,6 @@ import { DoctorDashboard } from "@/components/DoctorDashboard";
 import { PatientList } from "@/components/PatientList";
 import { PatientProfile } from "@/components/PatientProfile";
 import { ConsultationScreen } from "@/components/ConsultationScreen";
-import { InvoiceManagement } from "@/components/InvoiceManagement";
 import {
   LayoutDashboard,
   Users,
@@ -29,6 +28,8 @@ import {
 import { getFirebaseAuth } from "@/utils/firebase";
 import { signOut } from "firebase/auth";
 import useApiCall from "@/hooks/useApiCall";
+import Appointment from "@/types/Appointment";
+import useGeneratePrescription from "@/hooks/useGeneratePrescription";
 
 export default function App() {
   const router = useRouter();
@@ -99,6 +100,10 @@ export default function App() {
     }
   };
 
+  const { invokeRequest: invokeChangeAppointmentStatus } = useApiCall();
+
+  const { invokeGeneratePrescription } = useGeneratePrescription();
+
   // Show loading or nothing while checking auth
   if (isLoading) {
     return (
@@ -113,55 +118,67 @@ export default function App() {
 
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "patients", label: "Patients", icon: Users },
-    { id: "invoices", label: "Invoices", icon: FileText }
+    { id: "patients", label: "Patients", icon: Users }
   ];
+
+  const onStartConsultation = async (appointment: Appointment) => {
+    switch (appointment?.appointmentStatus) {
+      case "BKD":
+        await invokeChangeAppointmentStatus({
+          endpoint: "/api/appointments/status",
+          params: { id: appointment?.appointmentID || "" },
+          payload: { appointmentStatus: "ACT" },
+          method: "PATCH"
+        });
+        setSelectedAppointment(appointment);
+        setCurrentScreen("consultation");
+        break;
+      case "ACT":
+        setSelectedAppointment(appointment);
+        setCurrentScreen("consultation");
+        break;
+      case "COM":
+        await invokeGeneratePrescription(appointment?.appointmentID || "");
+        break;
+      case "CAN":
+      default:
+    }
+  };
+
+  const onPatientSelect = (patientId: string) => {
+    setSelectedPatientId(patientId);
+    setCurrentScreen("patient-profile");
+  };
 
   const renderScreen = () => {
     switch (currentScreen) {
       case "dashboard":
         return (
           <DoctorDashboard
-            onPatientSelect={(patientId) => {
-              setSelectedPatientId(patientId);
-              setCurrentScreen("patient-profile");
-            }}
-            onStartConsultation={(appointment) => {
-              setSelectedAppointment(appointment);
-              setCurrentScreen("consultation");
-            }}
+            doctorInfo={doctorProfileData}
+            onStartConsultation={onStartConsultation}
           />
         );
       case "patients":
-        return (
-          <PatientList
-            onPatientSelect={(patientId) => {
-              setSelectedPatientId(patientId);
-              setCurrentScreen("patient-profile");
-            }}
-          />
-        );
+        return <PatientList onPatientSelect={onPatientSelect} />;
       case "patient-profile":
         return (
           <PatientProfile
+            doctorInfo={doctorProfileData}
             patientId={selectedPatientId}
             onBack={() => setCurrentScreen("patients")}
-            onStartConsultation={(appointment) => {
-              setSelectedAppointment(appointment);
-              setCurrentScreen("consultation");
-            }}
+            onStartConsultation={onStartConsultation}
           />
         );
       case "consultation":
         return (
           <ConsultationScreen
-            appointment={selectedAppointment}
+            appointmentId={selectedAppointment?.appointmentID || ""}
             onComplete={() => setCurrentScreen("dashboard")}
             onCancel={() => setCurrentScreen("dashboard")}
+            onPatientSelect={onPatientSelect}
           />
         );
-      case "invoices":
-        return <InvoiceManagement />;
       default:
         return null;
     }
