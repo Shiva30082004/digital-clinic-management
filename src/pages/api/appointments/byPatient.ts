@@ -1,4 +1,4 @@
-import { DOCTOR_ID_HEADER_KEY } from "@/constants/auth";
+import { DOCTOR_ID_HEADER_KEY, CLINIC_ID_HEADER_KEY, ROLE_HEADER_KEY } from "@/constants/auth";
 import { getDbConnection } from "@/lib/database";
 import ApiResponse from "@/types/ApiResponse";
 import Appointment from "@/types/Appointment";
@@ -8,8 +8,10 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Appointment[]>>
 ) {
-  // Get doctorID from headers (production) or query params (testing)
-  const doctorID = (req.headers[DOCTOR_ID_HEADER_KEY] as string) || (req.query.doctorId as string);
+  // Get user info from headers (production)
+  const doctorID = (req.headers[DOCTOR_ID_HEADER_KEY] as string);
+  const clinicID = (req.headers[CLINIC_ID_HEADER_KEY] as string);
+  const role = (req.headers[ROLE_HEADER_KEY] as string);
 
   if (req.method !== "GET") {
     return res.status(405).json({ message: "Method not allowed" });
@@ -29,22 +31,43 @@ export default async function handler(
   }
 
   try {
+    let query: string;
+    let values: any[];
+
+    // Filter based on role
+    if (role === 'admin') {
+      // Admin: Get all appointments for this patient in the clinic
+      query = `
+        SELECT 
+          AppointmentID as appointmentID,
+          AppointmentStatus as appointmentStatus,
+          StartTime as startTime,
+          EndTime as endTime,
+          PatientID as patientID,
+          DoctorID as doctorID
+        FROM Appointments 
+        WHERE PatientID = ?
+          AND DoctorID IN (SELECT DoctorID FROM Doctors WHERE ClinicID = ?)
+        ORDER BY StartTime DESC
+      `;
+      values = [patientId, clinicID];
+    } else {
+      // Doctor: Get only appointments for this patient with this specific doctor
+      query = `
+        SELECT 
+          AppointmentID as appointmentID,
+          AppointmentStatus as appointmentStatus,
+          StartTime as startTime,
+          EndTime as endTime,
+          PatientID as patientID,
+          DoctorID as doctorID
+        FROM Appointments 
+        WHERE PatientID = ? AND DoctorID = ?
+        ORDER BY StartTime DESC
+      `;
+      values = [patientId, doctorID];
+    }
     
-    // Query appointments for specific patient, that belong to this doctor
-    const query = `
-      SELECT 
-        AppointmentID as appointmentID,
-        AppointmentStatus as appointmentStatus,
-        StartTime as startTime,
-        EndTime as endTime,
-        PatientID as patientID,
-        DoctorID as doctorID
-      FROM Appointments 
-      WHERE PatientID = ? AND DoctorID = ?
-      ORDER BY StartTime DESC
-    `;
-    
-    const values = [patientId, doctorID];
     const [rows] = await conn.execute<Appointment[]>(query, values);
 
     return res.status(200).json({ 

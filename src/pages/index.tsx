@@ -155,7 +155,12 @@ export default function App() {
   const renderScreen = () => {
     switch (currentScreen) {
       case "dashboard":
-        return <DoctorDashboard onStartConsultation={onStartConsultation} />;
+        return (
+          <DoctorDashboard
+            doctorInfo={doctorProfileData}
+            onStartConsultation={onStartConsultation}
+          />
+        );
       case "patients":
         return <PatientList onPatientSelect={onPatientSelect} />;
       case "patient-profile":
