@@ -50,8 +50,61 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import PatientVitals from "@/types/PatientVitals"; 
 import useApiCall from "@/hooks/useApiCall";
 import Appointment from "@/types/Appointment";
+
+import CardioChart from "@/components/ui/vitals/CardioChart";
+import OxygenChart from "@/components/ui/vitals/OxygenChart";
+import BodyMetricsChart from "@/components/ui/vitals/BodyMetricsChart";
+
+function average(arr: number[]) {
+  return arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+}
+
+function isValidVital(v: any) {
+  if (v === null || v === undefined) return false;
+  if (v === "") return false;
+  const num = Number(v);
+  if (Number.isNaN(num)) return false;
+  if (num <= 0) return false;        // vitals can't realistically be 0
+  return true;
+}
+
+function groupVitalsByDate(vitals: any[]) {
+  const map: Record<string, any[]> = {};
+
+  for (const v of vitals) {
+    const date = new Date(v.consultationTime).toISOString().split("T")[0];
+    if (!map[date]) map[date] = [];
+    map[date].push(v);
+  }
+
+  return Object.keys(map)
+    .sort()
+    .map(date => {
+      const list = map[date];
+
+      const safe = (values: any[]) =>
+        average(values.filter(isValidVital).map(Number));
+
+      return {
+        consultationTime: date,
+        temperature: safe(list.map(v => v.temperature)),
+        weight: safe(list.map(v => v.weight)),
+        height: safe(list.map(v => v.height)),
+        systolicBp: safe(list.map(v => v.systolicBp)),
+        diastolicBp: safe(list.map(v => v.diastolicBp)),
+        heartRate: safe(list.map(v => v.heartRate)),
+        bloodOxygen: safe(list.map(v => v.bloodOxygen)),
+        respiratoryRate: safe(list.map(v => v.respiratoryRate)),
+      };
+    });
+}
+
+
+
+
 
 export function PatientProfile({
   patientId,
@@ -227,6 +280,22 @@ export function PatientProfile({
     },
     fetchOnMount: !!patientId
   });
+
+  // Fetch vitals for this patient
+  const {
+    data: vitals = [],
+    isLoading: isLoadingVitals
+  } = useApiCall({
+    request: {
+      endpoint: "/api/patient/getPatientVitals",
+      method: "GET",
+      params: { patientId }
+    },
+    fetchOnMount: !!patientId
+  });
+  const vitalsData = groupVitalsByDate(Array.isArray(vitals) ? vitals : []);
+
+
 
   const patientName = useMemo(
     () =>
@@ -897,65 +966,65 @@ export function PatientProfile({
         </TabsContent>
 
         <TabsContent value="vitals" className="space-y-6">
-          <Card className="border-slate-200">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <TrendingUp className="mr-2 h-5 w-5 text-blue-600" />
-                Vital Signs Trends
+
+          {/* ================= TOP: BODY MEASUREMENTS ================= */}
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center text-base">
+                <Weight className="mr-2 h-4 w-4 text-purple-600" />
+                Body Measurements
               </CardTitle>
-              <CardDescription>
-                Historical data and trends over time
-              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="h-80 bg-gradient-to-br from-blue-50 to-slate-50 rounded-lg flex items-center justify-center border border-slate-200">
-                <div className="text-center text-slate-500">
-                  <Activity className="h-16 w-16 mx-auto mb-4 text-blue-400" />
-                  <p className="text-lg font-medium">Vitals Chart</p>
-                  <p className="text-sm mt-2">
-                    Blood Pressure, Heart Rate, Weight trends
-                  </p>
-                </div>
+            <CardContent className="pt-0">
+              <div className="h-72">
+                <BodyMetricsChart data={vitalsData} />
               </div>
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-slate-200">
-              <CardHeader>
+          {/* ================= BOTTOM (2 COLUMNS) ================= */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+            {/* LEFT → Oxygen + Heart Rate */}
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader className="pb-2">
                 <CardTitle className="flex items-center text-base">
-                  <Activity className="mr-2 h-4 w-4 text-red-600" />
-                  Blood Pressure
+                  <Activity className="mr-2 h-4 w-4 text-blue-600" />
+                  Oxygen Saturation & Heart Rate
                 </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64 bg-gradient-to-br from-red-50 to-orange-50 rounded-lg flex items-center justify-center border border-slate-200">
-                  <div className="text-center text-slate-500">
-                    <p className="text-sm">BP Trend Chart</p>
-                    <p className="text-xs mt-1">Last 6 months</p>
-                  </div>
+              </CardHeader >
+              <CardContent className="pt-0">
+                <div className="h-72">
+                  <OxygenChart data={vitalsData} />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-slate-200">
-              <CardHeader>
+            {/* RIGHT → Blood Pressure Trends */}
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader className="pb-2">
                 <CardTitle className="flex items-center text-base">
-                  <Weight className="mr-2 h-4 w-4 text-purple-600" />
-                  Weight
+                  <TrendingUp className="mr-2 h-4 w-4 text-blue-600" />
+                  Blood Pressure Trends
                 </CardTitle>
+                <CardDescription className="text-xs">
+                  Systolic & Diastolic over time
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="h-64 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg flex items-center justify-center border border-slate-200">
-                  <div className="text-center text-slate-500">
-                    <p className="text-sm">Weight Trend Chart</p>
-                    <p className="text-xs mt-1">Last 6 months</p>
-                  </div>
+              <CardContent className="pt-0">
+                <div className="h-72">
+                  <CardioChart data={vitalsData} />
                 </div>
               </CardContent>
             </Card>
+
           </div>
+
         </TabsContent>
+
+
+
+
+
 
         <TabsContent value="invoices" className="space-y-6">
           <Card className="border-slate-200">
