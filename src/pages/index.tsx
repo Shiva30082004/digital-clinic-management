@@ -103,19 +103,7 @@ export default function App() {
 
   const { invokeRequest: invokeChangeAppointmentStatus } = useApiCall();
 
-  const {
-    isSuccess: isPrescriptionGenerated = false,
-    data: prescription = "",
-    refetch: regeneratePrescription
-  } = useApiCall<Document>({
-    request: {
-      endpoint: "/api/document/generate",
-      params: { appointmentId: selectedAppointment?.appointmentID || "" },
-      method: "GET"
-    },
-    fetchOnMount:
-      !!selectedAppointment && selectedAppointment?.appointmentStatus === "COM"
-  });
+  const { invokeRequest: invokeGeneratePrescription } = useApiCall<Document>();
 
   const openPDFInNewWindow = async (data: Document) => {
     const byteCharacters = atob(data);
@@ -128,12 +116,6 @@ export default function App() {
     const fileURL = URL.createObjectURL(file);
     window.open(fileURL);
   };
-
-  useEffect(() => {
-    if (isPrescriptionGenerated && prescription) {
-      openPDFInNewWindow(prescription);
-    }
-  }, [isPrescriptionGenerated, prescription]);
 
   // Show loading or nothing while checking auth
   if (isLoading) {
@@ -170,10 +152,16 @@ export default function App() {
         setCurrentScreen("consultation");
         break;
       case "COM":
-        if (appointment?.appointmentID === selectedAppointment?.appointmentID) {
-          regeneratePrescription();
-        }
-        setSelectedAppointment(appointment);
+        await invokeGeneratePrescription(
+          {
+            endpoint: "/api/document/generate",
+            params: { appointmentId: appointment?.appointmentID || "" },
+            method: "GET"
+          },
+          {
+            onSuccess: openPDFInNewWindow
+          }
+        );
         break;
       case "CAN":
       default:
