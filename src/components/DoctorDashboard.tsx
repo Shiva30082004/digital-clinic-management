@@ -113,11 +113,8 @@ export function DoctorDashboard({ onStartConsultation, doctorInfo }) {
   const [newAppointment, setNewAppointment] = useState({
     patientId: "",
     date: new Date().toISOString().split("T")[0],
-    startTime: new Date().toISOString().split("T")[1].substring(0, 5),
-    endTime: new Date(Date.now() + 15 * 60 * 1000)
-      .toISOString()
-      .split("T")[1]
-      .substring(0, 5)
+    startTime: "",
+    endTime: ""
   });
   const [appointmentError, setAppointmentError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -314,11 +311,8 @@ export function DoctorDashboard({ onStartConsultation, doctorInfo }) {
       setNewAppointment({
         patientId: "",
         date: new Date().toISOString().split("T")[0],
-        startTime: new Date().toISOString().split("T")[1].substring(0, 5),
-        endTime: new Date(Date.now() + 15 * 60 * 1000)
-          .toISOString()
-          .split("T")[1]
-          .substring(0, 5)
+        startTime: "",
+        endTime: ""
       });
     } catch (error) {
       console.error("Failed to create appointment:", error);
@@ -880,7 +874,6 @@ export function DoctorDashboard({ onStartConsultation, doctorInfo }) {
                     ...newAppointment,
                     date: e.target.value
                   });
-                  console.log(e.target.value, new Date().toISOString());
                 }}
               />
             </div>

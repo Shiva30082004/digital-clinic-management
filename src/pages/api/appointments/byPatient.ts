@@ -1,4 +1,8 @@
-import { DOCTOR_ID_HEADER_KEY, CLINIC_ID_HEADER_KEY, ROLE_HEADER_KEY } from "@/constants/auth";
+import {
+  DOCTOR_ID_HEADER_KEY,
+  CLINIC_ID_HEADER_KEY,
+  ROLE_HEADER_KEY
+} from "@/constants/auth";
 import { getDbConnection } from "@/lib/database";
 import ApiResponse from "@/types/ApiResponse";
 import Appointment from "@/types/Appointment";
@@ -9,25 +13,25 @@ export default async function handler(
   res: NextApiResponse<ApiResponse<Appointment[]>>
 ) {
   // Get user info from headers (production)
-  const doctorID = (req.headers[DOCTOR_ID_HEADER_KEY] as string);
-  const clinicID = (req.headers[CLINIC_ID_HEADER_KEY] as string);
-  const role = (req.headers[ROLE_HEADER_KEY] as string);
+  const doctorID = req.headers[DOCTOR_ID_HEADER_KEY] as string;
+  const clinicID = req.headers[CLINIC_ID_HEADER_KEY] as string;
+  const role = req.headers[ROLE_HEADER_KEY] as string;
 
   if (req.method !== "GET") {
-    return res.status(405).json({ message: "Method not allowed" });
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   const { patientId } = req.query;
 
   if (!patientId) {
-    return res.status(400).json({ 
-      message: "patientId is required" 
+    return res.status(400).json({
+      error: "patientId is required"
     });
   }
 
   const conn = await getDbConnection();
   if (!conn) {
-    return res.status(500).json({ message: "Database connection failed" });
+    return res.status(500).json({ error: "Database connection failed" });
   }
 
   try {
@@ -35,7 +39,7 @@ export default async function handler(
     let values: any[];
 
     // Filter based on role
-    if (role === 'admin') {
+    if (role === "admin") {
       // Admin: Get all appointments for this patient in the clinic
       query = `
         SELECT 
@@ -67,16 +71,16 @@ export default async function handler(
       `;
       values = [patientId, doctorID];
     }
-    
+
     const [rows] = await conn.execute<Appointment[]>(query, values);
 
-    return res.status(200).json({ 
+    return res.status(200).json({
       data: rows,
-      message: `Found ${rows.length} appointments for patient ${patientId}` 
+      error: `Found ${rows.length} appointments for patient ${patientId}`
     });
   } catch (error) {
     console.error("Error fetching appointments by patient:", error);
-    return res.status(500).json({ message: "Failed to fetch appointments" });
+    return res.status(500).json({ error: "Failed to fetch appointments" });
   } finally {
     conn.release();
   }

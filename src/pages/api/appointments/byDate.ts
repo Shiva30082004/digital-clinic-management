@@ -1,40 +1,46 @@
-import { DOCTOR_ID_HEADER_KEY, CLINIC_ID_HEADER_KEY, ROLE_HEADER_KEY } from "@/constants/auth";
+import {
+  DOCTOR_ID_HEADER_KEY,
+  CLINIC_ID_HEADER_KEY,
+  ROLE_HEADER_KEY
+} from "@/constants/auth";
 import { getDbConnection } from "@/lib/database";
 import ApiResponse from "@/types/ApiResponse";
 import Appointment from "@/types/Appointment";
 import type { NextApiRequest, NextApiResponse } from "next";
-
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Appointment[]>>
 ) {
   // Get user info from headers (production) or query params (testing)
-  const doctorID = (req.headers[DOCTOR_ID_HEADER_KEY] as string);
-  const clinicID = (req.headers[CLINIC_ID_HEADER_KEY] as string);
-  const role = (req.headers[ROLE_HEADER_KEY] as string);
+  const doctorID = req.headers[DOCTOR_ID_HEADER_KEY] as string;
+  const clinicID = req.headers[CLINIC_ID_HEADER_KEY] as string;
+  const role = req.headers[ROLE_HEADER_KEY] as string;
 
   if (req.method !== "GET") {
-    return res.status(405).json({ message: "Method not allowed" });
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   const { startDate, endDate, status } = req.query;
 
   if (!startDate || !endDate) {
-    return res.status(400).json({ 
-      message: "Both startDate and endDate are required" 
+    return res.status(400).json({
+      error: "Both startDate and endDate are required"
     });
   }
 
-  if (isNaN(Date.parse(startDate as string)) || isNaN(Date.parse(endDate as string))) {
-    return res.status(400).json({ 
-      message: "Invalid date format. Use YYYY-MM-DD" 
+  if (
+    isNaN(Date.parse(startDate as string)) ||
+    isNaN(Date.parse(endDate as string))
+  ) {
+    return res.status(400).json({
+      error: "Invalid date format. Use YYYY-MM-DD"
     });
   }
 
   const conn = await getDbConnection();
   if (!conn) {
-    return res.status(500).json({ message: "Database connection failed" });
+    return res.status(500).json({ error: "Database connection failed" });
   }
 
   try {
@@ -52,11 +58,11 @@ export default async function handler(
       FROM Appointments a
       LEFT JOIN Patients p ON a.PatientID = p.PatientID
     `;
-    
+
     const values: any[] = [];
 
     // Filter based on role
-    if (role === 'admin') {
+    if (role === "admin") {
       // Admin: filter by clinicID (get all appointments for the clinic)
       query += `
       WHERE a.DoctorID IN (SELECT DoctorID FROM Doctors WHERE ClinicID = ?)
@@ -78,8 +84,8 @@ export default async function handler(
     if (status) {
       const validStatuses = ["BKD", "ACT", "COM", "CAN"];
       if (!validStatuses.includes(status as string)) {
-        return res.status(400).json({ 
-          message: "Invalid status. Must be one of: BKD, ACT, COM, CAN" 
+        return res.status(400).json({
+          error: "Invalid status. Must be one of: BKD, ACT, COM, CAN"
         });
       }
       query += " AND a.AppointmentStatus = ?";
@@ -90,13 +96,13 @@ export default async function handler(
 
     const [rows] = await conn.execute<Appointment[]>(query, values);
 
-    return res.status(200).json({ 
+    return res.status(200).json({
       data: rows,
-      message: `Found ${rows.length} appointments` 
+      error: `Found ${rows.length} appointments`
     });
   } catch (error) {
     console.error("Error fetching appointments by date:", error);
-    return res.status(500).json({ message: "Failed to fetch appointments" });
+    return res.status(500).json({ error: "Failed to fetch appointments" });
   } finally {
     conn.release();
   }

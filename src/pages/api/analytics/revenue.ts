@@ -18,12 +18,12 @@ export default async function handler(
   res: NextApiResponse
 ) {
   if (req.method !== "GET") {
-    return res.status(405).json({ message: "Method not allowed" });
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   const conn = await getDbConnection();
   if (!conn) {
-    return res.status(500).json({ message: "Database connection failed" });
+    return res.status(500).json({ error: "Database connection failed" });
   }
 
   try {
@@ -38,11 +38,11 @@ export default async function handler(
     if (role !== "admin") {
       return res
         .status(403)
-        .json({ message: "Access denied. Admin privileges required." });
+        .json({ error: "Access denied. Admin privileges required." });
     }
 
     if (!clinicID) {
-      return res.status(400).json({ message: "Clinic ID is required" });
+      return res.status(400).json({ error: "Clinic ID is required" });
     }
 
     // Get revenue for entire clinic
@@ -65,11 +65,11 @@ export default async function handler(
 
     return res.status(200).json({
       data: rows,
-      message: `Found revenue data for ${rows.length} months`
+      error: `Found revenue data for ${rows.length} months`
     });
   } catch (error) {
     console.error("Error fetching revenue data:", error);
-    return res.status(500).json({ message: "Failed to fetch revenue data" });
+    return res.status(500).json({ error: "Failed to fetch revenue data" });
   } finally {
     conn.release();
   }

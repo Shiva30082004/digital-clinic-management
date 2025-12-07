@@ -9,17 +9,16 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Appointment | Appointment[]>>
 ) {
-  // Get doctorID from headers 
-  const doctorID = (req.headers[DOCTOR_ID_HEADER_KEY] as string);
-  const clinicID = (req.headers[CLINIC_ID_HEADER_KEY] as string);
+  // Get doctorID from headers
+  const doctorID = req.headers[DOCTOR_ID_HEADER_KEY] as string;
+  const clinicID = req.headers[CLINIC_ID_HEADER_KEY] as string;
 
-  
   if (req.method === "GET") {
     const { id } = req.query;
 
     const conn = await getDbConnection();
     if (!conn) {
-      return res.status(500).json({ message: "Database connection failed" });
+      return res.status(500).json({ error: "Database connection failed" });
     }
 
     try {
@@ -40,12 +39,11 @@ export default async function handler(
         const [rows] = await conn.execute<Appointment[]>(query, values);
 
         if (rows.length === 0) {
-          return res.status(404).json({ message: "Appointment not found" });
+          return res.status(404).json({ error: "Appointment not found" });
         }
 
         return res.status(200).json({ data: rows[0] });
       } else {
-
         // Get all appointments for the doctor when no ID is provided
         const query = `
           SELECT 
@@ -66,7 +64,7 @@ export default async function handler(
       }
     } catch (error) {
       console.error("Error fetching appointments:", error);
-      return res.status(500).json({ message: "Failed to fetch appointments" });
+      return res.status(500).json({ error: "Failed to fetch appointments" });
     } finally {
       conn.release();
     }
@@ -78,35 +76,36 @@ export default async function handler(
 
     // Validations
     if (!appointmentStatus || !startTime || !endTime || !patientID) {
-      return res.status(400).json({ 
-        message: "Missing required fields: appointmentStatus, startTime, endTime, patientID" 
+      return res.status(400).json({
+        error:
+          "Missing required fields: appointmentStatus, startTime, endTime, patientID"
       });
     }
 
     const validStatuses = ["BKD", "ACT", "COM", "CAN"];
     if (!validStatuses.includes(appointmentStatus)) {
-      return res.status(400).json({ 
-        message: "Invalid appointment status. Must be one of: BKD, ACT, COM, CAN" 
+      return res.status(400).json({
+        error: "Invalid appointment status. Must be one of: BKD, ACT, COM, CAN"
       });
     }
 
     // Validate date format
     if (isNaN(Date.parse(startTime)) || isNaN(Date.parse(endTime))) {
-      return res.status(400).json({ 
-        message: "Invalid date format for startTime or endTime" 
+      return res.status(400).json({
+        error: "Invalid date format for startTime or endTime"
       });
     }
 
     // Validate endTime is after startTime
     if (new Date(endTime) <= new Date(startTime)) {
-      return res.status(400).json({ 
-        message: "endTime must be after startTime" 
+      return res.status(400).json({
+        error: "endTime must be after startTime"
       });
     }
 
     const conn = await getDbConnection();
     if (!conn) {
-      return res.status(500).json({ message: "Database connection failed" });
+      return res.status(500).json({ error: "Database connection failed" });
     }
 
     try {
@@ -115,7 +114,13 @@ export default async function handler(
         (AppointmentStatus, StartTime, EndTime, PatientID, DoctorID)
         VALUES (?, ?, ?, ?, ?)
       `;
-      const values = [appointmentStatus, startTime, endTime, patientID, doctorID];
+      const values = [
+        appointmentStatus,
+        startTime,
+        endTime,
+        patientID,
+        doctorID
+      ];
       const [result] = await conn.execute<ResultSetHeader>(query, values);
 
       // Fetch the created appointment
@@ -130,15 +135,17 @@ export default async function handler(
         FROM Appointments 
         WHERE AppointmentID = ?
       `;
-      const [rows] = await conn.execute<Appointment[]>(selectQuery, [result.insertId]);
+      const [rows] = await conn.execute<Appointment[]>(selectQuery, [
+        result.insertId
+      ]);
 
-      return res.status(201).json({ 
+      return res.status(201).json({
         data: rows[0],
-        message: "Appointment created successfully" 
+        error: "Appointment created successfully"
       });
     } catch (error) {
       console.error("Error creating appointment:", error);
-      return res.status(500).json({ message: "Failed to create appointment" });
+      return res.status(500).json({ error: "Failed to create appointment" });
     } finally {
       conn.release();
     }
@@ -150,37 +157,37 @@ export default async function handler(
     const { appointmentStatus, startTime, endTime, patientID } = req.body;
 
     if (!id) {
-      return res.status(400).json({ message: "Appointment ID is required" });
+      return res.status(400).json({ error: "Appointment ID is required" });
     }
 
-    
     if (appointmentStatus) {
       const validStatuses = ["BKD", "ACT", "COM", "CAN"];
       if (!validStatuses.includes(appointmentStatus)) {
-        return res.status(400).json({ 
-          message: "Invalid appointment status. Must be one of: BKD, ACT, COM, CAN" 
+        return res.status(400).json({
+          error:
+            "Invalid appointment status. Must be one of: BKD, ACT, COM, CAN"
         });
       }
     }
 
-    
     if (startTime && isNaN(Date.parse(startTime))) {
-      return res.status(400).json({ message: "Invalid date format for startTime" });
+      return res
+        .status(400)
+        .json({ error: "Invalid date format for startTime" });
     }
     if (endTime && isNaN(Date.parse(endTime))) {
-      return res.status(400).json({ message: "Invalid date format for endTime" });
+      return res.status(400).json({ error: "Invalid date format for endTime" });
     }
 
-    
     if (startTime && endTime && new Date(endTime) <= new Date(startTime)) {
-      return res.status(400).json({ 
-        message: "endTime must be after startTime" 
+      return res.status(400).json({
+        error: "endTime must be after startTime"
       });
     }
 
     const conn = await getDbConnection();
     if (!conn) {
-      return res.status(500).json({ message: "Database connection failed" });
+      return res.status(500).json({ error: "Database connection failed" });
     }
 
     try {
@@ -206,7 +213,7 @@ export default async function handler(
       }
 
       if (updates.length === 0) {
-        return res.status(400).json({ message: "No fields to update" });
+        return res.status(400).json({ error: "No fields to update" });
       }
 
       values.push(id, doctorID);
@@ -219,8 +226,8 @@ export default async function handler(
       const [result] = await conn.execute<ResultSetHeader>(query, values);
 
       if (result.affectedRows === 0) {
-        return res.status(404).json({ 
-          message: "Appointment not found or unauthorized" 
+        return res.status(404).json({
+          error: "Appointment not found or unauthorized"
         });
       }
 
@@ -238,13 +245,13 @@ export default async function handler(
       `;
       const [rows] = await conn.execute<Appointment[]>(selectQuery, [id]);
 
-      return res.status(200).json({ 
+      return res.status(200).json({
         data: rows[0],
-        message: "Appointment updated successfully" 
+        error: "Appointment updated successfully"
       });
     } catch (error) {
       console.error("Error updating appointment:", error);
-      return res.status(500).json({ message: "Failed to update appointment" });
+      return res.status(500).json({ error: "Failed to update appointment" });
     } finally {
       conn.release();
     }
@@ -255,12 +262,12 @@ export default async function handler(
     const { id } = req.query;
 
     if (!id) {
-      return res.status(400).json({ message: "Appointment ID is required" });
+      return res.status(400).json({ error: "Appointment ID is required" });
     }
 
     const conn = await getDbConnection();
     if (!conn) {
-      return res.status(500).json({ message: "Database connection failed" });
+      return res.status(500).json({ error: "Database connection failed" });
     }
 
     try {
@@ -272,17 +279,17 @@ export default async function handler(
       const [result] = await conn.execute<ResultSetHeader>(query, values);
 
       if (result.affectedRows === 0) {
-        return res.status(404).json({ 
-          message: "Appointment not found or unauthorized" 
+        return res.status(404).json({
+          error: "Appointment not found or unauthorized"
         });
       }
 
-      return res.status(200).json({ 
-        message: "Appointment deleted successfully" 
+      return res.status(200).json({
+        error: "Appointment deleted successfully"
       });
     } catch (error) {
       console.error("Error deleting appointment:", error);
-      return res.status(500).json({ message: "Failed to delete appointment" });
+      return res.status(500).json({ error: "Failed to delete appointment" });
     } finally {
       conn.release();
     }
@@ -290,6 +297,6 @@ export default async function handler(
 
   // Method not allowed
   else {
-    return res.status(405).json({ message: "Method not allowed" });
+    return res.status(405).json({ error: "Method not allowed" });
   }
 }

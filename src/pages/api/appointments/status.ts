@@ -10,10 +10,10 @@ export default async function handler(
   res: NextApiResponse<ApiResponse<Appointment>>
 ) {
   // Get doctorID from headers (production)
-  const doctorID = (req.headers[DOCTOR_ID_HEADER_KEY] as string);
+  const doctorID = req.headers[DOCTOR_ID_HEADER_KEY] as string;
 
   if (req.method !== "PATCH") {
-    return res.status(405).json({ message: "Method not allowed" });
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   const { id } = req.query;
@@ -21,23 +21,24 @@ export default async function handler(
 
   // Validation
   if (!id) {
-    return res.status(400).json({ message: "Appointment ID is required" });
+    return res.status(400).json({ error: "Appointment ID is required" });
   }
 
   if (!appointmentStatus) {
-    return res.status(400).json({ message: "appointmentStatus is required" });
+    return res.status(400).json({ error: "appointmentStatus is required" });
   }
 
   const validStatuses = ["BKD", "ACT", "COM", "CAN"];
   if (!validStatuses.includes(appointmentStatus)) {
-    return res.status(400).json({ 
-      message: "Invalid status. Must be one of: BKD (Booked), ACT (Active), COM (Completed), CAN (Cancelled)" 
+    return res.status(400).json({
+      error:
+        "Invalid status. Must be one of: BKD (Booked), ACT (Active), COM (Completed), CAN (Cancelled)"
     });
   }
 
   const conn = await getDbConnection();
   if (!conn) {
-    return res.status(500).json({ message: "Database connection failed" });
+    return res.status(500).json({ error: "Database connection failed" });
   }
 
   try {
@@ -51,8 +52,8 @@ export default async function handler(
     const [result] = await conn.execute<ResultSetHeader>(query, values);
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({ 
-        message: "Appointment not found or unauthorized" 
+      return res.status(404).json({
+        error: "Appointment not found or unauthorized"
       });
     }
 
@@ -70,13 +71,15 @@ export default async function handler(
     `;
     const [rows] = await conn.execute<Appointment[]>(selectQuery, [id]);
 
-    return res.status(200).json({ 
+    return res.status(200).json({
       data: rows[0],
-      message: `Appointment status updated to ${appointmentStatus}` 
+      error: `Appointment status updated to ${appointmentStatus}`
     });
   } catch (error) {
     console.error("Error updating appointment status:", error);
-    return res.status(500).json({ message: "Failed to update appointment status" });
+    return res
+      .status(500)
+      .json({ error: "Failed to update appointment status" });
   } finally {
     conn.release();
   }
