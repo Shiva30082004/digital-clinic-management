@@ -81,7 +81,7 @@ export default async function handler(
     ] = appointments || [];
 
     const consultationQuery =
-      "SELECT * FROM Consultations NATURAL JOIN Invoices WHERE appointmentId = ?";
+      "SELECT * FROM Consultations LEFT OUTER JOIN Invoices ON Consultations.AppointmentID = Invoices.AppointmentID WHERE Consultations.AppointmentID = ?";
     const consultationValues = [appointmentId];
 
     const [
@@ -116,7 +116,7 @@ export default async function handler(
     );
 
     const data = {
-      doctor_name,
+      doctor_name: `Dr. ${doctor_name}`,
       doctor_email,
       specialization,
       clinic_name,
@@ -124,8 +124,8 @@ export default async function handler(
       patient_name,
       patient_age,
       patient_gender,
-      chief_complaints,
-      diagnosis,
+      chief_complaints: chief_complaints || "None",
+      diagnosis: diagnosis || "None",
       patient_id: `P${patientId}`,
       date: new Date(date).toLocaleString(),
       temperature: Temperature ? `${Temperature} F` : "NA",
@@ -135,27 +135,28 @@ export default async function handler(
       spo2: BloodOxygen ? `${BloodOxygen}` : "NA",
       heart_rate: HeartRate ? `${HeartRate}bpm` : "NA",
       respiratory_rate: RespiratoryRate ? `${RespiratoryRate}` : "NA",
-      procedures: procedureRows
-        .map((procedure) => procedure.procedureName || "")
-        .join(", "),
+      procedures:
+        procedureRows.length > 0
+          ? procedureRows
+              .map((procedure) => procedure.ProcedureName || "")
+              .join(", ")
+          : "None",
       invoice_items: `
-        <tr><td>Consultation Fees</td><td>${consultationFees}</td></tr>
+        <tr><td>Consultation Fees</td><td>$${consultationFees}</td></tr>
         ${procedureRows
           .map(
             (procedure) =>
-              `<tr><td>${procedure.procedureName || ""}</td><td>$${
-                procedure.amount || 0
+              `<tr><td>${procedure.ProcedureName || ""}</td><td>$${
+                procedure.Amount || 0
               }</td></tr>`
           )
           .join("\n")}
-        ${
-          invoice_total
-            ? `<tr>
+        ${`<tr>
             <td><strong>Total</strong></td>
-            <td><strong>$${invoice_total}</strong></td>
-          </tr>`
-            : ""
-        }
+            <td><strong>${
+              invoice_total ? `${invoice_total}` : "Final invoice not generated"
+            }</strong></td>
+          </tr>`}
     `,
       generated_by: "DigiClinic",
       generated_at: new Date().toLocaleString()

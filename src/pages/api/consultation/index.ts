@@ -1,14 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getDbConnection } from "@/lib/database";
-import {
-  ROLE_HEADER_KEY,
-  DOCTOR_ID_HEADER_KEY,
-  CLINIC_ID_HEADER_KEY
-} from "@/constants/auth";
+import { DOCTOR_ID_HEADER_KEY, CLINIC_ID_HEADER_KEY } from "@/constants/auth";
 import ApiResponse from "@/types/ApiResponse";
 import Consultation from "@/types/Consultation";
+import type { Procedure } from "@/types/Procedure";
 
-type ConsultationResponse = ApiResponse<Consultation | Consultation[] | null>;
+type ConsultationWithProcedures = Consultation & {
+  procedures?: Procedure[];
+};
+
+type ConsultationResponse = ApiResponse<
+  ConsultationWithProcedures | ConsultationWithProcedures[] | null
+>;
+
 async function handleGet(
   req: NextApiRequest,
   res: NextApiResponse<ConsultationResponse>
@@ -19,6 +23,7 @@ async function handleGet(
     : appointmentIDRaw;
 
   const doctorID = req.headers[DOCTOR_ID_HEADER_KEY] as string;
+  const clinicID = req.headers[CLINIC_ID_HEADER_KEY] as string;
 
   const conn = await getDbConnection();
   if (!conn) {
@@ -48,7 +53,24 @@ async function handleGet(
         return res.status(200).json({ data: null } as ConsultationResponse);
       }
 
-      return res.status(200).json({ data: rows[0] } as ConsultationResponse);
+      const [procRows] = await conn.execute<Procedure[]>(
+        `
+          SELECT 
+            ProcedureID AS procedureId,
+            ProcedureName AS procedureName,
+            Amount AS amount
+          FROM ConsultationProcedures NATURAL JOIN Consultations NATURAL JOIN Procedures
+          WHERE AppointmentID = ?;
+        `,
+        [appointmentID]
+      );
+
+      const data: ConsultationWithProcedures = {
+        ...((rows[0] || {}) as Consultation),
+        procedures: procRows
+      };
+
+      return res.status(200).json({ data } as ConsultationResponse);
     } else {
       return res
         .status(400)
@@ -79,7 +101,8 @@ async function handlePost(
     weight,
     height,
     chiefComplaints,
-    diagnosis
+    diagnosis,
+    procedures = []
   } = req.body;
 
   if (!appointmentID) {
@@ -127,6 +150,23 @@ async function handlePost(
 
     const insertId = result.insertId as number;
 
+    if (Array.isArray(procedures) && procedures.length > 0) {
+      const valuesPlaceholders = procedures.map(() => "(?, ?)").join(", ");
+      const valuesParams: any[] = [];
+
+      (procedures as number[]).forEach((pid) => {
+        valuesParams.push(insertId, pid);
+      });
+
+      await conn.execute(
+        `
+      INSERT INTO ConsultationProcedures (ConsultationID, ProcedureID)
+      VALUES ${valuesPlaceholders};
+    `,
+        valuesParams
+      );
+    }
+
     const [rows] = await conn.execute<Consultation[]>(
       "SELECT * FROM Consultations WHERE ConsultationID = ?;",
       [insertId]
@@ -158,7 +198,8 @@ async function handlePut(
     weight,
     height,
     chiefComplaints,
-    diagnosis
+    diagnosis,
+    procedures = []
   } = req.body;
 
   if (!appointmentID) {
@@ -167,7 +208,6 @@ async function handlePut(
       .json({ error: "appointmentID is required" } as ConsultationResponse);
   }
 
-  const role = req.headers[ROLE_HEADER_KEY] as string;
   const doctorID = req.headers[DOCTOR_ID_HEADER_KEY] as string;
 
   const conn = await getDbConnection();
@@ -238,6 +278,53 @@ async function handlePut(
       return res
         .status(404)
         .json({ error: "Consultation not found" } as ConsultationResponse);
+    }
+
+    const [consRows] = await conn.execute<Consultation[]>(
+      "SELECT ConsultationID FROM Consultations WHERE AppointmentID = ?;",
+      [appointmentID]
+    );
+
+    const consultationId = (consRows[0] || {}).ConsultationID as number;
+
+    if (Array.isArray(procedures)) {
+      const [existingRows] = await conn.execute<any[]>(
+        "SELECT ProcedureID FROM ConsultationProcedures WHERE ConsultationID = ?;",
+        [consultationId]
+      );
+
+      const existingIds = new Set(existingRows.map((r) => r.ProcedureID));
+      const newIds = new Set<number>(procedures);
+
+      const toDelete: number[] = Array.from(existingIds.difference(newIds));
+      const toInsert: number[] = Array.from(newIds.difference(existingIds));
+
+      if (toDelete.length > 0) {
+        const placeholders = toDelete.map(() => "?").join(", ");
+        await conn.execute(
+          `
+            DELETE FROM ConsultationProcedures
+            WHERE ConsultationID = ?
+              AND ProcedureID IN (${placeholders});
+          `,
+          [consultationId, ...toDelete]
+        );
+      }
+      if (toInsert.length > 0) {
+        const valuesPlaceholders = toInsert.map(() => "(?, ?)").join(", ");
+        const valuesParams: any[] = [];
+        toInsert.forEach((pid) => {
+          valuesParams.push(consultationId, pid);
+        });
+
+        await conn.execute(
+          `
+            INSERT INTO ConsultationProcedures (ConsultationID, ProcedureID)
+            VALUES ${valuesPlaceholders};
+          `,
+          valuesParams
+        );
+      }
     }
 
     const [rows] = await conn.execute<Consultation[]>(

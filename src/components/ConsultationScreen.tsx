@@ -48,6 +48,10 @@ type ConsultationScreenProps = {
   onCancel: () => void;
 };
 
+type ConsultationWithProcedures = Consultation & {
+  procedures?: Procedure[];
+};
+
 export function ConsultationScreen({
   appointmentId,
   onComplete,
@@ -99,11 +103,18 @@ export function ConsultationScreen({
     setSelectedProcedures((prev) => [...prev, proc]);
   };
 
+  const handleRemoveProcedure = (procedureId: number) => {
+    setSelectedProcedures((prev) =>
+      prev.filter((p) => p.procedureId !== procedureId)
+    );
+  };
+
   const {
     data: consultationData,
     isLoading,
-    invokeRequest
-  } = useApiCall<Consultation>({
+    invokeRequest,
+    refetch
+  } = useApiCall<ConsultationWithProcedures>({
     request: {
       endpoint: "/api/consultation",
       method: "GET",
@@ -156,6 +167,8 @@ export function ConsultationScreen({
       chiefComplaint: currentConsultation.ChiefComplaints ?? "",
       diagnosis: currentConsultation.Diagnosis ?? ""
     }));
+
+    setSelectedProcedures(currentConsultation.procedures ?? []);
   }, [currentConsultation]);
 
   const disableEditing =
@@ -220,6 +233,8 @@ export function ConsultationScreen({
         method: hasExisting ? "PUT" : "POST",
         payload
       });
+
+      await refetch();
 
       if (completeAfterSave) {
         try {
@@ -457,6 +472,7 @@ export function ConsultationScreen({
                   placeholder="Clinical diagnosis..."
                   className="min-h-[120px] resize-none"
                   value={consultation.diagnosis}
+                  disabled={disableEditing}
                   onChange={(e) =>
                     setConsultation({
                       ...consultation,
@@ -480,7 +496,9 @@ export function ConsultationScreen({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <ProcedureSearch onSelect={handleProcedureSelect} />
+              {!disableEditing && (
+                <ProcedureSearch onSelect={handleProcedureSelect} />
+              )}
 
               {selectedProcedures.length > 0 && (
                 <div className="space-y-2">
@@ -489,9 +507,21 @@ export function ConsultationScreen({
                       key={p.procedureId}
                       className="flex items-center justify-between rounded border px-3 py-2 text-sm">
                       <span>{p.procedureName}</span>
-                      <span className="font-mono text-slate-700">
-                        ${p.amount}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-slate-700">
+                          ${p.amount}
+                        </span>
+                        {!disableEditing && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              handleRemoveProcedure(p.procedureId)
+                            }>
+                            <X className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
