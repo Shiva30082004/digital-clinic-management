@@ -1,15 +1,42 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { getDbConnection } from "@/lib/database";
 import ApiResponse from "@/types/ApiResponse";
-// import PatientVitals from "@/types/PatientVitals";
-import PatientVitals from "../../../types/PatientVitals";
+import PatientVitals from "@/types/PatientVitals";
 import { CLINIC_ID_HEADER_KEY } from "@/constants/auth";
+
+function formatDateLocal(date: any): string {
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+
+interface VitalsRow {
+  HeartRate: number | string | null;
+  RespiratoryRate: number | string | null;
+  Temperature: number | string | null;
+  SystolicBP: number | string | null;
+  DiastolicBP: number | string | null;
+  BloodOxygen: number | string | null;
+  Height: number | string | null;
+  Weight: number | string | null;
+  ConsultationTime: Date;
+}
+function toNullableNumber(value: any): number | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string" && value.trim() === "") return null;
+
+  const num = Number(value);
+  return Number.isNaN(num) ? null : num;
+}
+
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<PatientVitals[]>>
 ) {
-  // VALIDATION 
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -21,7 +48,6 @@ export default async function handler(
     return res.status(400).json({ error: "patientId is required" });
   }
 
-  //  DB CONNECTION 
   const conn = await getDbConnection();
   if (!conn) {
     return res.status(500).json({ error: "Database connection failed" });
@@ -41,35 +67,33 @@ export default async function handler(
         a.StartTime AS ConsultationTime
       FROM Consultations c
       JOIN Appointments a ON c.AppointmentID = a.AppointmentID
-      WHERE a.PatientID = ? AND a.ClinicID = ?
+      WHERE a.PatientID = ?
       ORDER BY a.StartTime DESC
       LIMIT 10
     `;
 
-    const values = [patientId, clinicId];
-
-    const [rows] = await conn.execute(query, values);
+    const [rows] = await conn.execute(query, [patientId]);
     conn.release();
 
-    const formatted = (rows as any[])
-      .reverse() 
+    const formatted: PatientVitals[] = (rows as VitalsRow[])
+      .reverse()
       .map((r) => ({
-        consultationTime: r.ConsultationTime,
-        heartRate: r.HeartRate,
-        respiratoryRate: r.RespiratoryRate,
-        temperature: r.Temperature,
-        systolicBp: r.SystolicBP,
-        diastolicBp: r.DiastolicBP,
-        bloodOxygen: r.BloodOxygen,
-        height: r.Height,
-        weight: r.Weight,
+        consultationTime: formatDateLocal(r.ConsultationTime),
+        heartRate: toNullableNumber(r.HeartRate),
+        respiratoryRate: toNullableNumber(r.RespiratoryRate),
+        temperature: toNullableNumber(r.Temperature),
+        systolicBp: toNullableNumber(r.SystolicBP),
+        diastolicBp: toNullableNumber(r.DiastolicBP),
+        bloodOxygen: toNullableNumber(r.BloodOxygen),
+        height: toNullableNumber(r.Height),
+        weight: toNullableNumber(r.Weight),
       }));
+
 
     return res.status(200).json({ data: formatted });
   } catch (err) {
     console.error("Vitals trend error:", err);
     try { conn.release(); } catch {}
-
     return res.status(500).json({ error: "Internal server error" });
   }
 }
