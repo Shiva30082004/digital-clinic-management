@@ -48,8 +48,9 @@ export default async function handler(
           StartTime as startTime,
           EndTime as endTime,
           PatientID as patientID,
-          DoctorID as doctorID
-        FROM Appointments 
+          DoctorID as doctorID,
+          CONCAT(FirstName, ' ', LastName) as doctorFullName
+        FROM Appointments NATURAL JOIN Doctors
         WHERE PatientID = ?
           AND DoctorID IN (SELECT DoctorID FROM Doctors WHERE ClinicID = ?)
         ORDER BY StartTime DESC
@@ -65,8 +66,7 @@ export default async function handler(
           EndTime as endTime,
           PatientID as patientID,
           DoctorID as doctorID,
-          CONCAT(FirstName, ' ', LastName) as doctorFullName
-        FROM Appointments NATURAL JOIN Doctors
+        FROM Appointments
         WHERE PatientID = ? AND DoctorID = ?
         ORDER BY StartTime DESC
       `;
