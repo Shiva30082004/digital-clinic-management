@@ -21,7 +21,7 @@
 | ---------- | ---------------------------------- |
 | Title      | Digital Clinic Management Platform |
 | System URL | [https://fa25-cs411-team102-sequelite-153046959301.us-central1.run.app/](https://fa25-cs411-team102-sequelite-153046959301.us-central1.run.app/login)                     |
-| Video Link | link_to_video                      |
+| Video Link | [https://mediaspace.illinois.edu/media/t/1_sgj0e6do](https://mediaspace.illinois.edu/media/t/1_sgj0e6do)                      |
 
 ## Project Summary
 
