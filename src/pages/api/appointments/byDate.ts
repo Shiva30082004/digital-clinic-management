@@ -54,8 +54,9 @@ export default async function handler(
         a.PatientID as patientID,
         a.DoctorID as doctorID,
         p.FirstName as patientFirstName,
-        p.LastName as patientLastName
-      FROM Appointments a
+        p.LastName as patientLastName,
+        CONCAT(d.FirstName, ' ', d.LastName) as doctorFullName
+      FROM Appointments a NATURAL JOIN Doctors d
       LEFT JOIN Patients p ON a.PatientID = p.PatientID
     `;
 

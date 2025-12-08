@@ -125,7 +125,7 @@ export function PatientProfile({
   const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [newAppointment, setNewAppointment] = useState({
-    date: new Date().toISOString().split("T")[0],
+    date: "",
     startTime: "",
     endTime: "",
     status: "Booked"
@@ -229,7 +229,7 @@ export function PatientProfile({
     });
     setShowNewAppointment(false);
     setNewAppointment({
-      date: new Date().toISOString().split("T")[0],
+      date: "",
       startTime: "",
       endTime: "",
       status: "Booked"
@@ -800,6 +800,9 @@ export function PatientProfile({
                       day: "numeric",
                       year: "numeric"
                     });
+                    const doctorName = `Dr. ${
+                      appointment.doctorFullName || ""
+                    }`;
 
                     const canViewAppointment =
                       (!isAdmin ||
@@ -828,7 +831,13 @@ export function PatientProfile({
                               {dateString}
                             </p>
                             <p className="text-sm text-slate-600">
-                              {timeString} - {endHours}:{endMinutes}
+                              {isAdmin ? (
+                                doctorName
+                              ) : (
+                                <>
+                                  {timeString} - {endHours}:{endMinutes}
+                                </>
+                              )}
                             </p>
                           </div>
                         </div>

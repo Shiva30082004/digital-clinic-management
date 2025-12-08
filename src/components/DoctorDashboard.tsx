@@ -112,7 +112,7 @@ export function DoctorDashboard({ onStartConsultation, doctorInfo }) {
   const lastFetchedDateRef = useRef<string>(""); // Use ref instead of state for persistence
   const [newAppointment, setNewAppointment] = useState({
     patientId: "",
-    date: new Date().toISOString().split("T")[0],
+    date: "",
     startTime: "",
     endTime: ""
   });
@@ -310,7 +310,7 @@ export function DoctorDashboard({ onStartConsultation, doctorInfo }) {
       setIsNewAppointmentOpen(false);
       setNewAppointment({
         patientId: "",
-        date: new Date().toISOString().split("T")[0],
+        date: "",
         startTime: "",
         endTime: ""
       });
@@ -364,7 +364,7 @@ export function DoctorDashboard({ onStartConsultation, doctorInfo }) {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 mb-1">
-            Good Morning, Doctor
+            Good afternoon, Doctor
           </h1>
           <p className="text-slate-600">
             You have {appointments.length} appointment
@@ -432,6 +432,7 @@ export function DoctorDashboard({ onStartConsultation, doctorInfo }) {
                   appointment.patientFirstName && appointment.patientLastName
                     ? `${appointment.patientFirstName} ${appointment.patientLastName}`
                     : `Patient ID: ${appointment.patientID}`;
+                const doctorName = `Dr. ${appointment.doctorFullName || ""}`;
 
                 // Check if this appointment can be viewed/edited by current doctor
                 const canViewAppointment =
@@ -460,11 +461,17 @@ export function DoctorDashboard({ onStartConsultation, doctorInfo }) {
                           {patientName}
                         </p>
                         <p className="text-sm text-slate-600">
-                          {timeString} -{" "}
-                          {new Date(appointment.endTime).getHours()}:
-                          {String(
-                            new Date(appointment.endTime).getMinutes()
-                          ).padStart(2, "0")}
+                          {isAdmin ? (
+                            doctorName
+                          ) : (
+                            <>
+                              {timeString} -{" "}
+                              {new Date(appointment.endTime).getHours()}:
+                              {String(
+                                new Date(appointment.endTime).getMinutes()
+                              ).padStart(2, "0")}
+                            </>
+                          )}
                         </p>
                       </div>
                     </div>
