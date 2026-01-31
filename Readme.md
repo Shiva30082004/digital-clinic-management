@@ -80,3 +80,4 @@ The project is now maintained here as part of my personal portfolio.
 ✨ License
 
 This project is shared for educational and portfolio purposes.
+- Original course repository: https://github.com/cs411-alawini/fa25-cs411-team102-Sequelite
