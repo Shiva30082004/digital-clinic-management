@@ -4,7 +4,7 @@ import { NextRouter } from "next/router";
 
 export const getFirebaseAuth = () => {
   const firebaseConfig = {
-    apiKey: "AIzaSyBnqXnl7oJQ7MMmOhaPyIhXah8-UAx0aHM",
+    
     authDomain: "sequelite-102.firebaseapp.com",
     projectId: "sequelite-102",
     storageBucket: "sequelite-102.firebasestorage.app",
