@@ -33,6 +33,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 gcp_keys.json
+src/utils/firebase.ts
 
 # vercel
 .vercel
